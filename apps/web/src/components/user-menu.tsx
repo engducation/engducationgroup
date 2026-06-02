@@ -1,3 +1,9 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,10 +15,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-
-import { authClient } from "@/lib/auth-client";
 
 export default function UserMenu() {
   const router = useRouter();
@@ -25,7 +27,7 @@ export default function UserMenu() {
   if (!session) {
     return (
       <Link href="/login">
-        <Button variant="outline">Sign In</Button>
+        <Button variant="outline">Đăng nhập</Button>
       </Link>
     );
   }
@@ -37,9 +39,29 @@ export default function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-card">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem>{session.user.email}</DropdownMenuItem>
+          {/* @ts-expect-error - role is injected */}
+          {session.user.role === "admin" && (
+            <DropdownMenuItem
+              render={
+                <Link
+                  href="/admin/dashboard"
+                  className="w-full text-indigo-600 font-bold dark:text-indigo-400"
+                >
+                  🛡️ Bảng Quản trị
+                </Link>
+              }
+            />
+          )}
+          <DropdownMenuItem
+            render={
+              <Link href="/dashboard" className="w-full text-muted-foreground">
+                📚 Khóa học của tôi
+              </Link>
+            }
+          />
           <DropdownMenuItem
             variant="destructive"
             onClick={() => {
@@ -52,7 +74,7 @@ export default function UserMenu() {
               });
             }}
           >
-            Sign Out
+            Đăng xuất
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

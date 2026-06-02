@@ -1,23 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 
-import "../index.css";
-import Header from "@/components/header";
+import "@/index.css";
 import Providers from "@/components/providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const inter = Inter({
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "engducationgroup",
-  description: "engducationgroup",
+  title: "Engducation — Học Tiếng Anh với AI",
+  description:
+    "Nền tảng học tiếng Anh trực tuyến. Học ngữ pháp qua video chất lượng cao, làm quiz tương tác và nâng tầm bài viết luận ngay lập tức với công nghệ AI sửa lỗi thông minh hoạt động 24/7.",
 };
 
 export default function RootLayout({
@@ -26,13 +23,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="vi" className={`${inter.variable} scroll-smooth`} suppressHydrationWarning>
+      <body className="min-h-screen bg-background font-sans antialiased text-slate-900">
         <Providers>
-          <div className="grid grid-rows-[auto_1fr] h-svh">
-            <Header />
-            {children}
-          </div>
+          {children}
         </Providers>
       </body>
     </html>

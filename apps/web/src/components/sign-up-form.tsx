@@ -28,9 +28,17 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           name: value.name,
         },
         {
-          onSuccess: () => {
-            router.push("/dashboard");
-            toast.success("Sign up successful");
+          onSuccess: async () => {
+            toast.success("Đăng nhập thành công");
+            // Redirect based on role
+            const session = await authClient.getSession();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const role = (session as any)?.user?.role;
+            if (role === "admin") {
+              router.push("/admin/dashboard");
+            } else {
+              router.push("/dashboard");
+            }
           },
           onError: (error) => {
             toast.error(error.error.message || error.error.statusText);
@@ -40,9 +48,9 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
     },
     validators: {
       onSubmit: z.object({
-        name: z.string().min(2, "Name must be at least 2 characters"),
-        email: z.email("Invalid email address"),
-        password: z.string().min(8, "Password must be at least 8 characters"),
+        name: z.string().min(2, "Tên phải có ít nhất 2 ký tự"),
+        email: z.email("Địa chỉ email không hợp lệ"),
+        password: z.string().min(8, "Mật khẩu phải có ít nhất 8 ký tự"),
       }),
     },
   });
@@ -52,8 +60,11 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
   }
 
   return (
-    <div className="mx-auto w-full mt-10 max-w-md p-6">
-      <h1 className="mb-6 text-center text-3xl font-bold">Create Account</h1>
+    <div className="mx-auto w-full max-w-md p-6">
+      <div className="mb-6 text-center">
+        <h1 className="text-2xl font-bold text-slate-900">Tạo tài khoản mới</h1>
+        <p className="mt-1 text-sm text-slate-500">Đăng ký miễn phí để bắt đầu học</p>
+      </div>
 
       <form
         onSubmit={(e) => {
@@ -67,16 +78,18 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           <form.Field name="name">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor={field.name}>Name</Label>
+                <Label htmlFor={field.name}>Họ và tên</Label>
                 <Input
                   id={field.name}
                   name={field.name}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="Nguyễn Văn A"
+                  className="rounded-lg"
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
+                  <p key={error?.message} className="text-sm text-red-500">
                     {error?.message}
                   </p>
                 ))}
@@ -97,9 +110,11 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="you@example.com"
+                  className="rounded-lg"
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
+                  <p key={error?.message} className="text-sm text-red-500">
                     {error?.message}
                   </p>
                 ))}
@@ -112,7 +127,7 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           <form.Field name="password">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor={field.name}>Password</Label>
+                <Label htmlFor={field.name}>Mật khẩu</Label>
                 <Input
                   id={field.name}
                   name={field.name}
@@ -120,9 +135,11 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="Tối thiểu 8 ký tự"
+                  className="rounded-lg"
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
+                  <p key={error?.message} className="text-sm text-red-500">
                     {error?.message}
                   </p>
                 ))}
@@ -135,8 +152,12 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
         >
           {({ canSubmit, isSubmitting }) => (
-            <Button type="submit" className="w-full" disabled={!canSubmit || isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Sign Up"}
+            <Button
+              type="submit"
+              className="w-full rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+              disabled={!canSubmit || isSubmitting}
+            >
+              {isSubmitting ? "Đang đăng ký..." : "Tạo tài khoản"}
             </Button>
           )}
         </form.Subscribe>
@@ -146,9 +167,9 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
         <Button
           variant="link"
           onClick={onSwitchToSignIn}
-          className="text-indigo-600 hover:text-indigo-800"
+          className="text-sm text-indigo-600 hover:text-indigo-800"
         >
-          Already have an account? Sign In
+          Đã có tài khoản? Đăng nhập ngay
         </Button>
       </div>
     </div>

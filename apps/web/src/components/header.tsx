@@ -31,32 +31,36 @@ export default function Header() {
           <NavigationMenu>
             <NavigationMenuList className="flex gap-8">
               <NavigationMenuItem>
-                <Link href="/#features" passHref legacyBehavior>
-                  <NavigationMenuLink className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent">
-                    Tính năng
-                  </NavigationMenuLink>
-                </Link>
+                <NavigationMenuLink
+                  render={<Link href="/#features" />}
+                  className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent"
+                >
+                  Tính năng
+                </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <Link href="/#ai-demo" passHref legacyBehavior>
-                  <NavigationMenuLink className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent">
-                    Trải nghiệm AI
-                  </NavigationMenuLink>
-                </Link>
+                <NavigationMenuLink
+                  render={<Link href="/#ai-demo" />}
+                  className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent"
+                >
+                  Trải nghiệm AI
+                </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <Link href="/#pricing" passHref legacyBehavior>
-                  <NavigationMenuLink className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent">
-                    Bảng giá
-                  </NavigationMenuLink>
-                </Link>
+                <NavigationMenuLink
+                  render={<Link href="/#pricing" />}
+                  className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent"
+                >
+                  Bảng giá
+                </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <Link href="/#roadmap" passHref legacyBehavior>
-                  <NavigationMenuLink className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent">
-                    Lộ trình học
-                  </NavigationMenuLink>
-                </Link>
+                <NavigationMenuLink
+                  render={<Link href="/#roadmap" />}
+                  className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent"
+                >
+                  Lộ trình học
+                </NavigationMenuLink>
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>

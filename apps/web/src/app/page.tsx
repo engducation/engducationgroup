@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import Footer from "@/components/footer";
+import Header from "@/components/header";
 import {
   Alert,
   AlertDescription,
@@ -90,7 +91,8 @@ export default function Home() {
   };
 
   return (
-    <div className="overflow-y-auto w-full h-full flex flex-col justify-between scroll-smooth bg-background">
+    <>
+      <Header />
       <main className="flex-1">
         {/* HERO SECTION */}
         <section className="relative w-full py-16 md:py-28 container mx-auto px-4 md:px-6">
@@ -98,7 +100,7 @@ export default function Home() {
             {/* Left Content */}
             <div className="lg:col-span-7 flex flex-col items-start space-y-6 text-left">
               <Badge variant="secondary" className="px-3 py-1.5 text-xs font-semibold border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                Phiên bản 1.0 — Tích hợp mô hình GPT-4o và Perplexity API mới nhất
+                Phiên bản 1.0 — Tích hợp Groq AI (Llama3-70B, tốc độ mili-giây)
               </Badge>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none text-primary">
                 Làm Chủ Kỹ Năng <br />
@@ -484,6 +486,6 @@ export default function Home() {
       </main>
 
       <Footer />
-    </div>
+    </>
   );
 }

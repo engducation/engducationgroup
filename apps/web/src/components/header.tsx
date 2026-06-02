@@ -1,33 +1,88 @@
 "use client";
 import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+} from "@/components/ui/navigation-menu";
+import { authClient } from "@/lib/auth-client";
+
 import { ModeToggle } from "./mode-toggle";
 import UserMenu from "./user-menu";
 
 export default function Header() {
-  const links = [
-    { to: "/", label: "Home" },
-    { to: "/dashboard", label: "Dashboard" },
-  ] as const;
+  const { data: session } = authClient.useSession();
 
   return (
-    <div>
-      <div className="flex flex-row items-center justify-between px-2 py-1">
-        <nav className="flex gap-4 text-lg">
-          {links.map(({ to, label }) => {
-            return (
-              <Link key={to} href={to}>
-                {label}
-              </Link>
-            );
-          })}
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+        {/* Left: Brand Logo */}
+        <Link href="/" className="font-bold text-xl tracking-tight text-primary flex items-center gap-2">
+          <span className="flex items-center gap-1 font-extrabold text-indigo-600 dark:text-indigo-400">
+            Engducation <span className="text-sky-400">❄️</span>
+          </span>
+        </Link>
+
+        {/* Center: NavigationMenu */}
+        <nav className="hidden md:flex">
+          <NavigationMenu>
+            <NavigationMenuList className="flex gap-8">
+              <NavigationMenuItem>
+                <Link href="/#features" passHref legacyBehavior>
+                  <NavigationMenuLink className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent">
+                    Tính năng
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link href="/#ai-demo" passHref legacyBehavior>
+                  <NavigationMenuLink className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent">
+                    Trải nghiệm AI
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link href="/#pricing" passHref legacyBehavior>
+                  <NavigationMenuLink className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent">
+                    Bảng giá
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link href="/#roadmap" passHref legacyBehavior>
+                  <NavigationMenuLink className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent">
+                    Lộ trình học
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+            </NavigationMenuList>
+          </NavigationMenu>
         </nav>
-        <div className="flex items-center gap-2">
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-3">
           <ModeToggle />
-          <UserMenu />
+          {session ? (
+            <UserMenu />
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link href="/login">
+                <Button variant="ghost" className="text-sm font-semibold hover:bg-muted/60">
+                  Đăng nhập
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button variant="default" className="text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/10 transition-all hover:shadow-lg hover:shadow-indigo-600/20 rounded-md">
+                  Bắt đầu miễn phí
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
-      <hr />
-    </div>
+    </header>
   );
 }

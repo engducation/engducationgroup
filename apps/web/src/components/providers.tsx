@@ -1,6 +1,6 @@
 "use client";
 
-import { Toaster } from "@engducationgroup/ui/components/sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 import { ThemeProvider } from "./theme-provider";
 

@@ -2,27 +2,26 @@
   "name": "engducationgroup",
   "private": true,
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/*"
   ],
   "type": "module",
   "scripts": {
-    "dev": "pnpm -r dev",
-    "build": "pnpm -r build",
-    "check-types": "pnpm -r check-types",
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "check-types": "pnpm --filter web exec tsc --noEmit",
     "dev:web": "pnpm --filter web dev",
-    "db:push": "pnpm --filter @engducationgroup/db db:push",
-    "db:studio": "pnpm --filter @engducationgroup/db db:studio",
-    "db:generate": "pnpm --filter @engducationgroup/db db:generate",
-    "db:migrate": "pnpm --filter @engducationgroup/db db:migrate"
+    "db:push": "pnpm --filter web db:push",
+    "db:studio": "pnpm --filter web db:studio",
+    "db:generate": "pnpm --filter web db:generate",
+    "db:migrate": "pnpm --filter web db:migrate",
+    "db:seed": "pnpm --filter web db:seed",
+    "db:reset": "pnpm --filter web db:reset"
   },
   "dependencies": {
-    "@engducationgroup/env": "workspace:*",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@engducationgroup/config": "workspace:*",
     "@types/node": "^22.13.14",
     "typescript": "catalog:"
   },

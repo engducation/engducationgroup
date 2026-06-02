@@ -1,4 +1,4 @@
-import { cn } from "@engducationgroup/ui/lib/utils";
+import { cn } from "@/lib/utils";
 import * as React from "react";
 
 function Card({

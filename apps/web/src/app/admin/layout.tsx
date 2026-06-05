@@ -1,17 +1,16 @@
 import Link from "next/link";
 import {
-  ArrowLeft,
   Bell,
   Settings,
   ChevronDown,
   Shield,
-  LogOut,
   Activity,
 } from "lucide-react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import AdminSidebarNav from "@/components/admin-sidebar-nav";
+import AdminSignOutMenuItem from "@/components/admin-sign-out-menu-item";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Breadcrumb,
@@ -116,10 +115,7 @@ export default async function AdminLayout({
                 Cài đặt hệ thống
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" className="gap-2 py-2">
-                <LogOut className="size-4" />
-                Đăng xuất
-              </DropdownMenuItem>
+              <AdminSignOutMenuItem />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -147,14 +143,6 @@ export default async function AdminLayout({
           </div>
 
           <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="hidden items-center gap-1.5 text-xs font-medium text-slate-500 transition-colors hover:text-indigo-600 lg:inline-flex"
-            >
-              <ArrowLeft className="size-3.5" />
-              Khu học viên
-            </Link>
-            <span className="hidden h-4 w-px bg-slate-200 lg:block" />
             <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200/60 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm sm:inline-flex">
               <span className="relative flex size-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />

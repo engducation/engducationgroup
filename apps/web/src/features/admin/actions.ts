@@ -25,7 +25,6 @@ async function requireAdmin(): Promise<AdminUser> {
   const session = await getSession();
   if (!session?.user) redirect("/login");
   
-  // @ts-expect-error - role is dynamically added to user session
   if (session.user.role !== "admin") {
     throw new Error("Không có quyền thực hiện thao tác này");
   }

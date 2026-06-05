@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Be_Vietnam_Pro } from "next/font/google";
 
 import "@/index.css";
 import Providers from "@/components/providers";
 
-const inter = Inter({
+const beVietnamPro = Be_Vietnam_Pro({
   subsets: ["latin", "vietnamese"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800", "900"],
   variable: "--font-sans",
   display: "swap",
 });
@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className={`${inter.variable} scroll-smooth`} suppressHydrationWarning>
+    <html lang="vi" className={`${beVietnamPro.variable} scroll-smooth`} data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased text-slate-900">
         <Providers>
           {children}

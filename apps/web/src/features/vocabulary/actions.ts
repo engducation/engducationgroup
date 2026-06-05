@@ -41,7 +41,6 @@ async function getSession() {
 async function requireAdmin(): Promise<string> {
   const session = await getSession();
   if (!session?.user) redirect("/login");
-  // @ts-expect-error - role may be injected via custom better-auth plugin
   if (session.user.role !== "admin") throw new Error("Không có quyền thực hiện thao tác này");
   return session.user.id;
 }

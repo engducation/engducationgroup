@@ -28,12 +28,14 @@ export const course = pgTable(
     description: text("description"),
     level: varchar("level", { length: 50 }).notNull(),
     thumbnailUrl: text("thumbnail_url"),
+    certificateTemplateUrl: text("certificate_template_url"),
     status: varchar("status", { length: 20 })
       .$type<PublicationStatus>()
       .default("DRAFT")
       .notNull(),
-    originalPrice: integer("original_price"),
-    sellingPrice: integer("selling_price"),
+    isFree: boolean("is_free").default(true).notNull(),
+    originalPrice: integer("original_price").default(0),
+    sellingPrice: integer("selling_price").default(0),
     accessDurationDays: integer("access_duration_days"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
@@ -54,6 +56,11 @@ export const module = pgTable(
       .notNull()
       .references(() => course.id, { onDelete: "restrict" }),
     title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    status: varchar("status", { length: 20 })
+      .$type<PublicationStatus>()
+      .default("DRAFT")
+      .notNull(),
     orderIndex: integer("order_index").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
@@ -77,6 +84,11 @@ export const lesson = pgTable(
       .notNull()
       .references(() => module.id, { onDelete: "restrict" }),
     title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    status: varchar("status", { length: 20 })
+      .$type<PublicationStatus>()
+      .default("DRAFT")
+      .notNull(),
     orderIndex: integer("order_index").notNull(),
     hasRead: boolean("has_read").default(false).notNull(),
     hasWrite: boolean("has_write").default(false).notNull(),
@@ -206,6 +218,38 @@ export const lessonVideo = pgTable(
   (table) => [index("lesson_video_lesson_idx").on(table.lessonId)],
 );
 
+// ─── Module Vocabulary ───────────────────────────────────────────────────────
+
+export const moduleVocabulary = pgTable(
+  "module_vocabulary",
+  {
+    id: text("id").primaryKey(),
+    moduleId: text("module_id")
+      .notNull()
+      .references(() => module.id, { onDelete: "cascade" }),
+    word: varchar("word", { length: 255 }).notNull(),
+    phonetic: text("phonetic"),
+    partOfSpeech: varchar("part_of_speech", { length: 50 }).notNull(),
+    meaning: text("meaning").notNull(),
+    example: text("example"),
+    notes: text("notes"),
+    orderIndex: integer("order_index").default(0).notNull(),
+    status: varchar("status", { length: 20 })
+      .$type<PublicationStatus>()
+      .default("DRAFT")
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("module_vocabulary_module_idx").on(table.moduleId),
+    uniqueIndex("module_vocabulary_module_order_unique").on(table.moduleId, table.orderIndex),
+  ],
+);
+
 // ─── Vocabulary (Global) ───────────────────────────────────────────────────
 
 export const vocabulary = pgTable(
@@ -274,6 +318,35 @@ export const userVocabulary = pgTable(
     index("user_vocabulary_user_idx").on(table.userId),
     index("user_vocabulary_vocab_idx").on(table.vocabularyId),
     uniqueIndex("user_vocabulary_unique").on(table.userId, table.vocabularyId),
+  ],
+);
+
+// ─── Course Review ───────────────────────────────────────────────────────────
+
+export const courseReview = pgTable(
+  "course_review",
+  {
+    id: text("id").primaryKey(),
+    courseId: text("course_id")
+      .notNull()
+      .references(() => course.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    rating: integer("rating").notNull(),
+    comment: text("comment"),
+    adminReply: text("admin_reply"),
+    adminReplyAt: timestamp("admin_reply_at"),
+    status: varchar("status", { length: 20 }).default("VISIBLE").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("course_review_course_idx").on(table.courseId),
+    index("course_review_user_idx").on(table.userId),
   ],
 );
 
@@ -366,6 +439,7 @@ export const writingSubmission = pgTable(
 
 export const courseRelations = relations(course, ({ many }) => ({
   modules: many(module),
+  reviews: many(courseReview),
 }));
 
 export const moduleRelations = relations(module, ({ one, many }) => ({
@@ -374,6 +448,7 @@ export const moduleRelations = relations(module, ({ one, many }) => ({
     references: [course.id],
   }),
   lessons: many(lesson),
+  vocabularies: many(moduleVocabulary),
 }));
 
 export const lessonRelations = relations(lesson, ({ one, many }) => ({
@@ -438,6 +513,13 @@ export const writeRelations = relations(write, ({ one }) => ({
   }),
 }));
 
+export const moduleVocabularyRelations = relations(moduleVocabulary, ({ one }) => ({
+  module: one(module, {
+    fields: [moduleVocabulary.moduleId],
+    references: [module.id],
+  }),
+}));
+
 export const vocabularyRelations = relations(vocabulary, ({ many }) => ({
   lessonVocabularies: many(lessonVocabulary),
   userVocabularies: many(userVocabulary),
@@ -462,6 +544,17 @@ export const userVocabularyRelations = relations(userVocabulary, ({ one }) => ({
   vocabulary: one(vocabulary, {
     fields: [userVocabulary.vocabularyId],
     references: [vocabulary.id],
+  }),
+}));
+
+export const courseReviewRelations = relations(courseReview, ({ one }) => ({
+  course: one(course, {
+    fields: [courseReview.courseId],
+    references: [course.id],
+  }),
+  user: one(user, {
+    fields: [courseReview.userId],
+    references: [user.id],
   }),
 }));
 

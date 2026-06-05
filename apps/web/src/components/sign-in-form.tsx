@@ -10,6 +10,30 @@ import { authClient } from "@/lib/auth-client";
 
 import Loader from "./loader";
 
+const ROLE_REDIRECTS = {
+  admin: "/admin/dashboard",
+  user: "/dashboard",
+} as const;
+
+async function resolveRoleAfterSignIn() {
+  const session = await authClient.getSession();
+  const role = session.data?.user?.role;
+
+  console.info("[auth] resolved role after sign-in:", role, session.data?.user?.email);
+
+  return role;
+}
+
+async function redirectToRoleDashboard(
+  router: ReturnType<typeof useRouter>,
+  role: string | null | undefined,
+) {
+  const destination = role === "admin" ? ROLE_REDIRECTS.admin : ROLE_REDIRECTS.user;
+
+  router.replace(destination);
+  router.refresh();
+}
+
 export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
   const router = useRouter();
   const { isPending } = authClient.useSession();
@@ -26,17 +50,14 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
           password: value.password,
         },
         {
-          onSuccess: async () => {
+          onSuccess: async (ctx) => {
+            const initialRole = ctx.data?.user?.role;
+            console.info("[auth] sign-in success role from callback:", initialRole, ctx.data?.user?.email);
+
+            const resolvedRole = initialRole ?? (await resolveRoleAfterSignIn());
+
             toast.success("Đăng nhập thành công");
-            // Redirect based on role
-            const session = await authClient.getSession();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const role = (session as any)?.user?.role;
-            if (role === "admin") {
-              router.push("/admin/dashboard");
-            } else {
-              router.push("/dashboard");
-            }
+            await redirectToRoleDashboard(router, resolvedRole);
           },
           onError: (error) => {
             toast.error(error.error.message || error.error.statusText);

@@ -42,7 +42,6 @@ export default function UserMenu() {
           <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem>{session.user.email}</DropdownMenuItem>
-          {/* @ts-expect-error - role is injected */}
           {session.user.role === "admin" && (
             <DropdownMenuItem
               render={

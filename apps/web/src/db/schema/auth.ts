@@ -10,6 +10,8 @@ export const user = pgTable("user", {
   role: text("role"),
   status: varchar("status", { length: 20 }).default("ACTIVE").notNull(),
   banReason: text("ban_reason"),
+  activatedAt: timestamp("activated_at"), // subscription activated date
+  expiresAt: timestamp("expires_at"), // subscription expiry date, null = no subscription
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

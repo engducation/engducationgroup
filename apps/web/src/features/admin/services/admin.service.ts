@@ -1,9 +1,6 @@
 import { db } from "@/db";
 import {
   aiPrompt,
-  userCourse,
-  courseOrder,
-  transactionAuditLog,
   systemSetting,
   userAiUsage,
   aiApiLog,
@@ -275,181 +272,29 @@ export async function getAiCostAnalytics() {
 }
 
 // ─── 4. SUBSCRIPTION & ORDER ACTIVATION ────────────────────────────────────
+// These functions are deprecated. Use admin-v2.service.ts instead.
 
-export async function createManualOrder(
-  userId: string,
-  courseId: string,
-  amount: number,
-  adminId: string,
-) {
-  const orderId = "MAN_" + nanoid(10).toUpperCase();
-
-  await db.transaction(async (tx) => {
-    // Tạo Order dạng PENDING
-    await tx.insert(courseOrder).values({
-      id: orderId,
-      userId,
-      courseId,
-      amount,
-      status: "PENDING",
-      paymentMethod: "MANUAL_BANK_TRANSFER",
-      adminId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    // Tạo bản ghi log đối soát đầu tiên
-    await tx.insert(transactionAuditLog).values({
-      id: nanoid(),
-      orderId,
-      userId,
-      courseId,
-      amount,
-      oldStatus: "NONE",
-      newStatus: "PENDING",
-      paymentMethod: "MANUAL_BANK_TRANSFER",
-      adminId,
-      createdAt: new Date(),
-    });
-  });
-
-  return orderId;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function createManualOrder(_userId: string, _courseId: string, _amount: number, _adminId: string) {
+	throw new Error("Deprecated: use admin-v2.service.createAdminManualOrder instead");
 }
 
-export async function approveOrder(orderId: string, adminId: string) {
-  const order = await db.query.courseOrder.findFirst({
-    where: eq(courseOrder.id, orderId),
-  });
-
-  if (!order) throw new Error("Đơn hàng không tồn tại");
-  if (order.status !== "PENDING") throw new Error("Đơn hàng này đã được xử lý rồi");
-
-  // Tìm khóa học để xem accessDurationDays
-  const targetCourse = await db.query.course.findFirst({
-    where: eq(course.id, order.courseId),
-  });
-
-  if (!targetCourse) throw new Error("Khóa học không tồn tại");
-
-  await db.transaction(async (tx) => {
-    // 1. Cập nhật Order -> SUCCESS
-    await tx
-      .update(courseOrder)
-      .set({
-        status: "SUCCESS",
-        adminId,
-        updatedAt: new Date(),
-      })
-      .where(eq(courseOrder.id, orderId));
-
-    // 2. Tính toán ngày hết hạn quyền truy cập khóa học
-    const activatedAt = new Date();
-    let expiresAt: Date | null = null;
-
-    if (targetCourse.accessDurationDays && targetCourse.accessDurationDays > 0) {
-      expiresAt = new Date(activatedAt.getTime() + targetCourse.accessDurationDays * 24 * 60 * 60 * 1000);
-    }
-
-    // 3. Khởi tạo quyền truy cập khóa học (userCourse)
-    await tx.insert(userCourse).values({
-      id: nanoid(),
-      userId: order.userId,
-      courseId: order.courseId,
-      activatedAt,
-      expiresAt,
-      createdAt: new Date(),
-    });
-
-    // 4. Ghi Audit Log Giao dịch bất biến
-    await tx.insert(transactionAuditLog).values({
-      id: nanoid(),
-      orderId,
-      userId: order.userId,
-      courseId: order.courseId,
-      amount: order.amount,
-      oldStatus: "PENDING",
-      newStatus: "SUCCESS",
-      paymentMethod: order.paymentMethod,
-      adminId,
-      createdAt: new Date(),
-    });
-  });
-
-  return { success: true };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function approveOrder(_orderId: string, _adminId: string) {
+	throw new Error("Deprecated: use admin-v2.service.approveAdminOrder instead");
 }
 
-export async function rejectOrder(orderId: string, reason: string, adminId: string) {
-  const order = await db.query.courseOrder.findFirst({
-    where: eq(courseOrder.id, orderId),
-  });
-
-  if (!order) throw new Error("Đơn hàng không tồn tại");
-  if (order.status !== "PENDING") throw new Error("Đơn hàng này đã được xử lý rồi");
-
-  await db.transaction(async (tx) => {
-    // 1. Cập nhật Order -> FAILED
-    await tx
-      .update(courseOrder)
-      .set({
-        status: "FAILED",
-        rejectionReason: reason,
-        adminId,
-        updatedAt: new Date(),
-      })
-      .where(eq(courseOrder.id, orderId));
-
-    // 2. Ghi Audit Log Giao dịch bất biến
-    await tx.insert(transactionAuditLog).values({
-      id: nanoid(),
-      orderId,
-      userId: order.userId,
-      courseId: order.courseId,
-      amount: order.amount,
-      oldStatus: "PENDING",
-      newStatus: "FAILED",
-      paymentMethod: order.paymentMethod,
-      adminId,
-      createdAt: new Date(),
-    });
-  });
-
-  return { success: true };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function rejectOrder(_orderId: string, _reason: string, _adminId: string) {
+	throw new Error("Deprecated: use admin-v2.service.rejectAdminOrder instead");
 }
 
 export async function getOrders() {
-  return db
-    .select({
-      id: courseOrder.id,
-      amount: courseOrder.amount,
-      status: courseOrder.status,
-      paymentMethod: courseOrder.paymentMethod,
-      rejectionReason: courseOrder.rejectionReason,
-      createdAt: courseOrder.createdAt,
-      userName: user.name,
-      userEmail: user.email,
-      courseTitle: course.title,
-    })
-    .from(courseOrder)
-    .innerJoin(user, eq(courseOrder.userId, user.id))
-    .innerJoin(course, eq(courseOrder.courseId, course.id))
-    .orderBy(desc(courseOrder.createdAt));
+	return [];
 }
 
 export async function getTransactionAuditLogs() {
-  return db
-    .select({
-      id: transactionAuditLog.id,
-      orderId: transactionAuditLog.orderId,
-      amount: transactionAuditLog.amount,
-      oldStatus: transactionAuditLog.oldStatus,
-      newStatus: transactionAuditLog.newStatus,
-      paymentMethod: transactionAuditLog.paymentMethod,
-      createdAt: transactionAuditLog.createdAt,
-      adminName: user.name,
-    })
-    .from(transactionAuditLog)
-    .leftJoin(user, eq(transactionAuditLog.adminId, user.id))
-    .orderBy(desc(transactionAuditLog.createdAt));
+	return [];
 }
 
 // ─── 5. HELPDECK & HUMAN-IN-THE-LOOP ───────────────────────────────────────

@@ -11,6 +11,29 @@ import {
 import { user } from "./auth";
 import { write, writingSubmission } from "./learning-content";
 
+// ─── Subscription Package Enum ───────────────────────────────────────────────
+
+export const packageTypeEnum = ["MONTHLY", "6_MONTH", "YEAR"] as const;
+export type PackageType = (typeof packageTypeEnum)[number];
+
+export const PACKAGE_DURATIONS: Record<PackageType, number> = {
+  MONTHLY: 30,
+  "6_MONTH": 180,
+  YEAR: 365,
+};
+
+export const PACKAGE_PRICES: Record<PackageType, number> = {
+  MONTHLY: 49000,
+  "6_MONTH": 269000,
+  YEAR: 499000,
+};
+
+export const PACKAGE_LABELS: Record<PackageType, string> = {
+  MONTHLY: "Monthly Package (30 ngày)",
+  "6_MONTH": "6-Month Package (180 ngày)",
+  YEAR: "1-Year Package (365 ngày)",
+};
+
 // ─── 1. AI Prompts ──────────────────────────────────────────────────────────
 
 export const aiPrompt = pgTable("ai_prompt", {
@@ -27,30 +50,19 @@ export const aiPrompt = pgTable("ai_prompt", {
     .notNull(),
 });
 
-// ─── 2. User Course Access ───────────────────────────────────────────────────
+// ─── 2. Package Order (Subscription Purchase) ────────────────────────────────
 
-export const userCourse = pgTable("user_courses", {
+export const packageOrder = pgTable("package_order", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  courseId: text("course_id").notNull(),
-  activatedAt: timestamp("activated_at").defaultNow().notNull(),
-  expiresAt: timestamp("expires_at"), // null means Lifetime / Unlimited
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-// ─── 3. Course Order ─────────────────────────────────────────────────────────
-
-export const courseOrder = pgTable("course_order", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  courseId: text("course_id").notNull(),
+  packageType: varchar("package_type", { length: 20 })
+    .$type<PackageType>()
+    .notNull(),
   amount: integer("amount").notNull(),
   status: varchar("status", { length: 20 }).default("PENDING").notNull(), // PENDING, SUCCESS, FAILED
-  paymentMethod: varchar("payment_method", { length: 50 }).notNull(), // MANUAL_BANK_TRANSFER, SYSTEM_GATEWAY_WEBHOOK
+  paymentMethod: varchar("payment_method", { length: 50 }).notNull(),
   rejectionReason: text("rejection_reason"),
   adminId: text("admin_id").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -60,13 +72,15 @@ export const courseOrder = pgTable("course_order", {
     .notNull(),
 });
 
-// ─── 4. Transaction Audit Log (Append-Only) ───────────────────────────────
+// ─── 3. Subscription Audit Log (Append-Only) ───────────────────────────────
 
-export const transactionAuditLog = pgTable("transaction_audit_log", {
+export const subscriptionAuditLog = pgTable("subscription_audit_log", {
   id: text("id").primaryKey(),
   orderId: text("order_id").notNull(),
   userId: text("user_id").notNull(),
-  courseId: text("course_id").notNull(),
+  packageType: varchar("package_type", { length: 20 })
+    .$type<PackageType>()
+    .notNull(),
   amount: integer("amount").notNull(),
   oldStatus: varchar("old_status", { length: 20 }).notNull(),
   newStatus: varchar("new_status", { length: 20 }).notNull(),
@@ -193,20 +207,20 @@ export const adminAuditLog = pgTable("admin_audit_log", {
 
 // ─── Relations ─────────────────────────────────────────────────────────────
 
-export const userCourseRelations = relations(userCourse, ({ one }) => ({
+export const packageOrderRelations = relations(packageOrder, ({ one }) => ({
   user: one(user, {
-    fields: [userCourse.userId],
+    fields: [packageOrder.userId],
+    references: [user.id],
+  }),
+  admin: one(user, {
+    fields: [packageOrder.adminId],
     references: [user.id],
   }),
 }));
 
-export const courseOrderRelations = relations(courseOrder, ({ one }) => ({
+export const subscriptionAuditLogRelations = relations(subscriptionAuditLog, ({ one }) => ({
   user: one(user, {
-    fields: [courseOrder.userId],
-    references: [user.id],
-  }),
-  admin: one(user, {
-    fields: [courseOrder.adminId],
+    fields: [subscriptionAuditLog.userId],
     references: [user.id],
   }),
 }));

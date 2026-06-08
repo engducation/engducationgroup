@@ -39,10 +39,6 @@ const defaultForm = {
   level: "",
   thumbnailUrl: "",
   certificateTemplateUrl: "",
-  isFree: false,
-  originalPrice: 0,
-  sellingPrice: 0,
-  accessDurationDays: 0,
 };
 
 export default function AdminCoursesPage() {
@@ -68,10 +64,6 @@ const courses = (data ?? []) as any[];
         level: form.level,
         thumbnailUrl: form.thumbnailUrl || undefined,
         certificateTemplateUrl: form.certificateTemplateUrl || undefined,
-        isFree: form.isFree,
-        originalPrice: form.isFree ? 0 : Number(form.originalPrice || 0),
-        sellingPrice: form.isFree ? 0 : Number(form.sellingPrice || 0),
-        accessDurationDays: form.accessDurationDays ? Number(form.accessDurationDays) : null,
       });
       toast.success("Đã tạo khóa học");
       setOpen(false);
@@ -129,17 +121,6 @@ const courses = (data ?? []) as any[];
               <Textarea placeholder="Mô tả khóa học" value={form.description} onChange={(e) => setForm((curr) => ({ ...curr, description: e.target.value }))} />
               <Input placeholder="Thumbnail URL" value={form.thumbnailUrl} onChange={(e) => setForm((curr) => ({ ...curr, thumbnailUrl: e.target.value }))} />
               <Input placeholder="Certificate template URL" value={form.certificateTemplateUrl} onChange={(e) => setForm((curr) => ({ ...curr, certificateTemplateUrl: e.target.value }))} />
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" checked={form.isFree} onChange={(e) => setForm((curr) => ({ ...curr, isFree: e.target.checked }))} />
-                Khóa học miễn phí
-              </label>
-              {!form.isFree ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <Input type="number" placeholder="Giá gốc" value={form.originalPrice} onChange={(e) => setForm((curr) => ({ ...curr, originalPrice: Number(e.target.value) }))} />
-                  <Input type="number" placeholder="Giá bán" value={form.sellingPrice} onChange={(e) => setForm((curr) => ({ ...curr, sellingPrice: Number(e.target.value) }))} />
-                </div>
-              ) : null}
-              <Input type="number" placeholder="Số ngày truy cập" value={form.accessDurationDays} onChange={(e) => setForm((curr) => ({ ...curr, accessDurationDays: Number(e.target.value) }))} />
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>Hủy</Button>
@@ -206,11 +187,7 @@ const courses = (data ?? []) as any[];
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-3 md:grid-cols-4">
-                    <div className="rounded-2xl border border-slate-200 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Giá bán</p>
-                      <p className="mt-2 text-lg font-semibold text-slate-950">{course.isFree ? "Miễn phí" : `${Number(course.sellingPrice ?? 0).toLocaleString("vi-VN")}đ`}</p>
-                    </div>
+                  <div className="grid gap-3 md:grid-cols-3">
                     <div className="rounded-2xl border border-slate-200 p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Chương học</p>
                       <p className="mt-2 text-lg font-semibold text-slate-950">{moduleCount}</p>

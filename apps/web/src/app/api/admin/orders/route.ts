@@ -19,7 +19,12 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const data = await adminService.createAdminManualOrder(body.userId, body.courseId, body.amount, admin!.id);
+    const data = await adminService.createAdminManualOrder(
+      body.userId,
+      body.packageType,
+      body.amount,
+      admin!.id,
+    );
     return apiOk(data, { status: 201 });
   } catch (error) {
     return apiError(error, "Không thể tạo đơn hàng thủ công");

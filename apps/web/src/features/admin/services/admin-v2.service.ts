@@ -1,10 +1,11 @@
 import { db } from "@/db";
 import {
   adminAuditLog,
-  courseOrder,
+  packageOrder,
   systemSetting,
-  transactionAuditLog,
-  userCourse,
+  subscriptionAuditLog,
+  PACKAGE_DURATIONS,
+  PACKAGE_LABELS,
 } from "@/db/schema";
 import {
   course,
@@ -18,11 +19,13 @@ import {
   read,
   write,
 } from "@/db/schema/learning-content";
-import { and, asc, count, desc, eq, inArray, isNull, sql, sum } from "drizzle-orm";
+import { user } from "@/db/schema/auth";
+import { and, asc, count, desc, eq, gte, inArray, isNull, sql, sum } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export type PublicationStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED" | "PAUSED";
 export type OrderStatus = "PENDING" | "SUCCESS" | "FAILED";
+export type PackageType = "MONTHLY" | "6_MONTH" | "YEAR";
 
 export interface AdminCourseInput {
   title: string;
@@ -35,10 +38,6 @@ export interface AdminCourseInput {
   thumbnailUrl?: string;
   certificateTemplateUrl?: string;
   policyNotes?: string;
-  isFree?: boolean;
-  originalPrice?: number;
-  sellingPrice?: number;
-  accessDurationDays?: number | null;
   status?: PublicationStatus;
 }
 
@@ -147,7 +146,6 @@ function serializeWorkspaceCourse(rawCourse: any) {
 }
 
 function normalizeCoursePayload(input: Partial<AdminCourseInput>) {
-  const isFree = input.isFree ?? true;
   return {
     ...(input.title !== undefined ? { title: input.title } : {}),
     ...(input.description !== undefined ? { description: input.description } : {}),
@@ -155,23 +153,16 @@ function normalizeCoursePayload(input: Partial<AdminCourseInput>) {
       ? { certificateTemplateUrl: input.detailedDescription }
       : {}),
     ...(input.learningObjectives !== undefined
-      ? { accessDurationDays: input.learningObjectives ? null : undefined }
+      ? { learningObjectives: input.learningObjectives }
       : {}),
-    ...(input.targetAudience !== undefined ? { thumbnailUrl: input.targetAudience } : {}),
+    ...(input.targetAudience !== undefined ? { targetAudience: input.targetAudience } : {}),
     ...(input.level !== undefined ? { level: input.level } : {}),
     ...(input.language !== undefined ? { description: input.language } : {}),
     ...(input.thumbnailUrl !== undefined ? { thumbnailUrl: input.thumbnailUrl } : {}),
     ...(input.certificateTemplateUrl !== undefined
       ? { certificateTemplateUrl: input.certificateTemplateUrl }
       : {}),
-    ...(input.policyNotes !== undefined ? { sellingPrice: input.policyNotes ? input.sellingPrice : input.sellingPrice } : {}),
     ...(input.status !== undefined ? { status: normalizeStatus(input.status) } : {}),
-    ...(input.isFree !== undefined ? { isFree } : {}),
-    ...(input.originalPrice !== undefined
-      ? { originalPrice: isFree ? 0 : input.originalPrice }
-      : {}),
-    ...(input.sellingPrice !== undefined ? { sellingPrice: isFree ? 0 : input.sellingPrice } : {}),
-    ...(input.accessDurationDays !== undefined ? { accessDurationDays: input.accessDurationDays } : {}),
   };
 }
 
@@ -220,57 +211,59 @@ async function nextModuleVocabularyOrderIndex(moduleId: string) {
   return (row?.max ?? -1) + 1;
 }
 
-async function grantCourseAccessForOrderSuccess(orderId: string, adminId: string) {
-  const order = await db.query.courseOrder.findFirst({ where: eq(courseOrder.id, orderId) });
+async function grantSubscriptionForOrderSuccess(orderId: string, adminId: string) {
+  const order = await db.query.packageOrder.findFirst({ where: eq(packageOrder.id, orderId) });
   if (!order) throw new Error("Đơn hàng không tồn tại");
   if (order.status !== "PENDING") throw new Error("Đơn hàng này đã được xử lý rồi");
 
-  const targetCourse = await ensureCourseExists(order.courseId);
+  const packageDays = PACKAGE_DURATIONS[order.packageType as PackageType] ?? 30;
 
   await db.transaction(async (tx) => {
+    // Update order status
     await tx
-      .update(courseOrder)
+      .update(packageOrder)
       .set({
         status: "SUCCESS",
         adminId,
         updatedAt: new Date(),
       })
-      .where(eq(courseOrder.id, orderId));
+      .where(eq(packageOrder.id, orderId));
 
-    const activatedAt = new Date();
-    const expiresAt =
-      targetCourse.accessDurationDays && targetCourse.accessDurationDays > 0
-        ? new Date(activatedAt.getTime() + targetCourse.accessDurationDays * 24 * 60 * 60 * 1000)
-        : null;
+    // Calculate new subscription expiry
+    const now = new Date();
+    const newActivatedAt = now;
+    const packageDurationMs = packageDays * 24 * 60 * 60 * 1000;
 
-    const existingAccess = await tx.query.userCourse.findFirst({
-      where: and(eq(userCourse.userId, order.userId), eq(userCourse.courseId, order.courseId)),
-    });
+    // Get current user subscription
+    const [currentUser] = await tx
+      .select({ expiresAt: user.expiresAt })
+      .from(user)
+      .where(eq(user.id, order.userId));
 
-    if (existingAccess) {
-      await tx
-        .update(userCourse)
-        .set({
-          activatedAt,
-          expiresAt,
-        })
-        .where(eq(userCourse.id, existingAccess.id));
-    } else {
-      await tx.insert(userCourse).values({
-        id: nanoid(),
-        userId: order.userId,
-        courseId: order.courseId,
-        activatedAt,
-        expiresAt,
-        createdAt: new Date(),
-      });
-    }
+    const currentExpiresAt = currentUser?.expiresAt ? new Date(currentUser.expiresAt) : null;
+    const isCurrentlyActive = currentExpiresAt && currentExpiresAt > now;
 
-    await tx.insert(transactionAuditLog).values({
+    // If user has active subscription, extend from current expiry
+    // If no active subscription, start from now
+    const baseDate = isCurrentlyActive ? currentExpiresAt! : now;
+    const newExpiresAt = new Date(baseDate.getTime() + packageDurationMs);
+
+    // Update user subscription dates
+    await tx
+      .update(user)
+      .set({
+        activatedAt: newActivatedAt,
+        expiresAt: newExpiresAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(user.id, order.userId));
+
+    // Create audit log
+    await tx.insert(subscriptionAuditLog).values({
       id: nanoid(),
       orderId: order.id,
       userId: order.userId,
-      courseId: order.courseId,
+      packageType: order.packageType,
       amount: order.amount,
       oldStatus: "PENDING",
       newStatus: "SUCCESS",
@@ -293,27 +286,22 @@ export async function getAdminCourseDashboard() {
 
   const [orderStats] = await db
     .select({
-      totalRevenue: sum(courseOrder.amount),
-      paidOrders: sql<number>`sum(case when ${courseOrder.status} = 'SUCCESS' then 1 else 0 end)`,
-      pendingOrders: sql<number>`sum(case when ${courseOrder.status} = 'PENDING' then 1 else 0 end)`,
+      totalRevenue: sum(packageOrder.amount),
+      paidOrders: sql<number>`sum(case when ${packageOrder.status} = 'SUCCESS' then 1 else 0 end)`,
+      pendingOrders: sql<number>`sum(case when ${packageOrder.status} = 'PENDING' then 1 else 0 end)`,
     })
-    .from(courseOrder);
+    .from(packageOrder);
 
-  const topSellingCourses = await db
+  // Package distribution: count SUCCESS orders per package type
+  const packageDistribution = await db
     .select({
-      courseId: course.id,
-      title: course.title,
-      enrollments: count(courseOrder.id),
-      revenue: sum(courseOrder.amount),
+      packageType: packageOrder.packageType,
+      count: count(packageOrder.id),
+      revenue: sum(packageOrder.amount),
     })
-    .from(course)
-    .leftJoin(
-      courseOrder,
-      and(eq(courseOrder.courseId, course.id), eq(courseOrder.status, "SUCCESS")),
-    )
-    .groupBy(course.id, course.title)
-    .orderBy(desc(sum(courseOrder.amount)), desc(count(courseOrder.id)))
-    .limit(5);
+    .from(packageOrder)
+    .where(eq(packageOrder.status, "SUCCESS"))
+    .groupBy(packageOrder.packageType);
 
   return {
     totals: {
@@ -325,10 +313,10 @@ export async function getAdminCourseDashboard() {
       paidOrders: Number(orderStats?.paidOrders ?? 0),
       pendingOrders: Number(orderStats?.pendingOrders ?? 0),
     },
-    topSellingCourses: topSellingCourses.map((item) => ({
-      courseId: item.courseId,
-      title: item.title,
-      enrollments: item.enrollments,
+    packageDistribution: packageDistribution.map((item) => ({
+      packageType: item.packageType,
+      label: PACKAGE_LABELS[item.packageType as PackageType] ?? item.packageType,
+      count: item.count,
       revenue: Number(item.revenue ?? 0),
     })),
   };
@@ -401,10 +389,6 @@ export async function createAdminCourse(input: AdminCourseInput) {
     level: input.level,
     thumbnailUrl: input.thumbnailUrl ?? null,
     certificateTemplateUrl: input.certificateTemplateUrl ?? null,
-    isFree: input.isFree ?? true,
-    originalPrice: input.isFree ?? true ? 0 : (input.originalPrice ?? 0),
-    sellingPrice: input.isFree ?? true ? 0 : (input.sellingPrice ?? 0),
-    accessDurationDays: input.accessDurationDays ?? null,
     status: persistedStatus,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -948,8 +932,8 @@ export async function archiveAdminCourse(courseId: string) {
 }
 
 export async function getAdminOrders() {
-  return db.query.courseOrder.findMany({
-    orderBy: [desc(courseOrder.createdAt)],
+  return db.query.packageOrder.findMany({
+    orderBy: [desc(packageOrder.createdAt)],
     with: {
       user: true,
       admin: true,
@@ -959,17 +943,17 @@ export async function getAdminOrders() {
 
 export async function createAdminManualOrder(
   userId: string,
-  courseId: string,
+  packageType: PackageType,
   amount: number,
   adminId: string,
 ) {
-  const orderId = `MAN_${nanoid(10).toUpperCase()}`;
+  const orderId = `PKG_${nanoid(10).toUpperCase()}`;
 
   await db.transaction(async (tx) => {
-    await tx.insert(courseOrder).values({
+    await tx.insert(packageOrder).values({
       id: orderId,
       userId,
-      courseId,
+      packageType,
       amount,
       status: "PENDING",
       paymentMethod: "MANUAL_BANK_TRANSFER",
@@ -978,11 +962,11 @@ export async function createAdminManualOrder(
       updatedAt: new Date(),
     });
 
-    await tx.insert(transactionAuditLog).values({
+    await tx.insert(subscriptionAuditLog).values({
       id: nanoid(),
       orderId,
       userId,
-      courseId,
+      packageType,
       amount,
       oldStatus: "NONE",
       newStatus: "PENDING",
@@ -996,31 +980,31 @@ export async function createAdminManualOrder(
 }
 
 export async function approveAdminOrder(orderId: string, adminId: string) {
-  await grantCourseAccessForOrderSuccess(orderId, adminId);
+  await grantSubscriptionForOrderSuccess(orderId, adminId);
   return { orderId };
 }
 
 export async function rejectAdminOrder(orderId: string, reason: string, adminId: string) {
-  const order = await db.query.courseOrder.findFirst({ where: eq(courseOrder.id, orderId) });
+  const order = await db.query.packageOrder.findFirst({ where: eq(packageOrder.id, orderId) });
   if (!order) throw new Error("Đơn hàng không tồn tại");
   if (order.status !== "PENDING") throw new Error("Đơn hàng này đã được xử lý rồi");
 
   await db.transaction(async (tx) => {
     await tx
-      .update(courseOrder)
+      .update(packageOrder)
       .set({
         status: "FAILED",
         adminId,
         rejectionReason: reason,
         updatedAt: new Date(),
       })
-      .where(eq(courseOrder.id, orderId));
+      .where(eq(packageOrder.id, orderId));
 
-    await tx.insert(transactionAuditLog).values({
+    await tx.insert(subscriptionAuditLog).values({
       id: nanoid(),
       orderId: order.id,
       userId: order.userId,
-      courseId: order.courseId,
+      packageType: order.packageType,
       amount: order.amount,
       oldStatus: "PENDING",
       newStatus: "FAILED",
@@ -1036,28 +1020,41 @@ export async function rejectAdminOrder(orderId: string, reason: string, adminId:
 export async function getAdminOrderAnalytics() {
   const [stats] = await db
     .select({
-      totalRevenue: sum(courseOrder.amount),
-      successOrders: sql<number>`sum(case when ${courseOrder.status} = 'SUCCESS' then 1 else 0 end)`,
-      pendingOrders: sql<number>`sum(case when ${courseOrder.status} = 'PENDING' then 1 else 0 end)`,
-      failedOrders: sql<number>`sum(case when ${courseOrder.status} = 'FAILED' then 1 else 0 end)`,
+      totalRevenue: sum(packageOrder.amount),
+      successOrders: sql<number>`sum(case when ${packageOrder.status} = 'SUCCESS' then 1 else 0 end)`,
+      pendingOrders: sql<number>`sum(case when ${packageOrder.status} = 'PENDING' then 1 else 0 end)`,
+      failedOrders: sql<number>`sum(case when ${packageOrder.status} = 'FAILED' then 1 else 0 end)`,
     })
-    .from(courseOrder);
+    .from(packageOrder);
+
+  // Package distribution for analytics
+  const packageDistribution = await db
+    .select({
+      packageType: packageOrder.packageType,
+      count: count(packageOrder.id),
+    })
+    .from(packageOrder)
+    .where(eq(packageOrder.status, "SUCCESS"))
+    .groupBy(packageOrder.packageType);
 
   return {
     totalRevenue: Number(stats?.totalRevenue ?? 0),
     successOrders: Number(stats?.successOrders ?? 0),
     pendingOrders: Number(stats?.pendingOrders ?? 0),
     failedOrders: Number(stats?.failedOrders ?? 0),
+    packageDistribution: packageDistribution.map((item) => ({
+      packageType: item.packageType,
+      label: PACKAGE_LABELS[item.packageType as PackageType] ?? item.packageType,
+      count: item.count,
+    })),
   };
 }
 
 export async function getAdminTransactionLogs() {
-  return db.query.transactionAuditLog.findMany({
-    orderBy: [desc(transactionAuditLog.createdAt)],
+  return db.query.subscriptionAuditLog.findMany({
+    orderBy: [desc(subscriptionAuditLog.createdAt)],
     with: {
-      order: true,
       user: true,
-      admin: true,
     },
   });
 }
@@ -1127,7 +1124,7 @@ export async function updateAdminSystemSetting(key: string, value: string, _admi
 
 export async function getAdminUsersModeration() {
   return db.query.user.findMany({
-    orderBy: [desc(userCourse.createdAt)],
+    orderBy: [desc(user.createdAt)],
   });
 }
 

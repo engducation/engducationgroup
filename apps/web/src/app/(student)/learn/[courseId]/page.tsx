@@ -4,8 +4,8 @@ import { headers } from "next/headers";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { course, module, lesson, lessonVideo } from "@/db/schema/learning-content";
-import { courseOrder } from "@/db/schema/admin";
-import { eq, asc } from "drizzle-orm";
+import { user } from "@/db/schema/auth";
+import { eq, asc, and } from "drizzle-orm";
 import {
   ArrowLeft,
   BookOpen,
@@ -13,6 +13,7 @@ import {
   PenLine,
   Play,
   Lock,
+  AlertTriangle,
 } from "lucide-react";
 
 interface PageProps {
@@ -30,22 +31,23 @@ export default async function StudentLearnPage({ params }: PageProps) {
     redirect("/login");
   }
 
-  // Verify enrollment
-  const enrollments = await db
-    .select()
-    .from(courseOrder)
-    .where(eq(courseOrder.courseId, courseId));
+  // Verify subscription is active
+  const [currentUser] = await db
+    .select({ expiresAt: user.expiresAt })
+    .from(user)
+    .where(eq(user.id, session.user.id));
 
-  const isEnrolled = enrollments.some((e) => e.userId === session.user.id);
-  if (!isEnrolled) {
-    redirect("/dashboard");
+  const now = new Date();
+  const isSubscriptionActive = currentUser?.expiresAt && new Date(currentUser.expiresAt) > now;
+  if (!isSubscriptionActive) {
+    redirect("/dashboard?expired=true");
   }
 
-  // Fetch course
+  // Fetch course (must be published for access)
   const courses = await db
     .select()
     .from(course)
-    .where(eq(course.id, courseId))
+    .where(and(eq(course.id, courseId), eq(course.status, "PUBLISHED")))
     .limit(1);
 
   if (!courses.length) {

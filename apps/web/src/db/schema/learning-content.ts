@@ -33,10 +33,6 @@ export const course = pgTable(
       .$type<PublicationStatus>()
       .default("DRAFT")
       .notNull(),
-    isFree: boolean("is_free").default(true).notNull(),
-    originalPrice: integer("original_price").default(0),
-    sellingPrice: integer("selling_price").default(0),
-    accessDurationDays: integer("access_duration_days"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

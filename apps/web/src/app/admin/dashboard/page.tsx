@@ -94,19 +94,19 @@ export default function AdminDashboardPage() {
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Card className="border-slate-200">
           <CardHeader>
-            <CardTitle>Top khóa học bán chạy</CardTitle>
-            <CardDescription>Xếp hạng theo doanh thu và số lượt mua thành công.</CardDescription>
+            <CardTitle>Phân bổ gói dịch vụ</CardTitle>
+            <CardDescription>Thống kê lượt mua theo từng gói thời hạn.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {isLoading
-              ? Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-20 w-full" />)
-              : (overview?.topSellingCourses ?? []).map((course: any, index: number) => (
-                  <div key={course.courseId} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 p-4">
+              ? Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-20 w-full" />)
+              : (overview?.packageDistribution ?? []).map((pkg: any) => (
+                  <div key={pkg.packageType} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 p-4">
                     <div>
-                      <p className="text-sm font-semibold text-slate-950">#{index + 1} {course.title}</p>
-                      <p className="mt-1 text-sm text-slate-600">{course.enrollments} giao dịch thành công</p>
+                      <p className="text-sm font-semibold text-slate-950">{pkg.label}</p>
+                      <p className="mt-1 text-sm text-slate-600">{pkg.count} giao dịch thành công</p>
                     </div>
-                    <p className="text-sm font-semibold text-slate-950">{Number(course.revenue ?? 0).toLocaleString("vi-VN")}đ</p>
+                    <p className="text-sm font-semibold text-slate-950">{Number(pkg.revenue ?? 0).toLocaleString("vi-VN")}đ</p>
                   </div>
                 ))}
           </CardContent>

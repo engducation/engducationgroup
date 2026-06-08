@@ -12,10 +12,6 @@ export interface AdminCoursePayload {
   thumbnailUrl?: string;
   certificateTemplateUrl?: string;
   policyNotes?: string;
-  isFree?: boolean;
-  originalPrice?: number;
-  sellingPrice?: number;
-  accessDurationDays?: number | null;
   status?: "DRAFT" | "PUBLISHED" | "PAUSED";
 }
 

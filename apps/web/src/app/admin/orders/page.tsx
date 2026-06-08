@@ -34,9 +34,9 @@ export default function AdminOrdersPage() {
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-950">Transactions & doanh thu</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-950">Gói dịch vụ &amp; doanh thu</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Theo dõi doanh thu, số giao dịch và lịch sử thanh toán. Không còn luồng duyệt mua khóa học thủ công.
+          Theo dõi doanh thu, số giao dịch và lịch sử thanh toán gói hội viên.
         </p>
       </section>
 
@@ -128,7 +128,7 @@ export default function AdminOrdersPage() {
                       Người thanh toán: {transaction.user?.name ?? transaction.userId}
                     </p>
                     <p className="text-sm text-slate-600">User ID: {transaction.userId}</p>
-                    <p className="text-sm text-slate-600">Course ID: {transaction.courseId}</p>
+                    <p className="text-sm text-slate-600">Gói: {transaction.packageType}</p>
                     <p className="text-sm text-slate-600">Phương thức: {transaction.paymentMethod}</p>
                   </div>
                   <div className="space-y-2 text-left lg:text-right">

@@ -8,6 +8,20 @@
       "when": 1780656940766,
       "tag": "0000_light_santa_claus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1751811600000,
+      "tag": "0001_subscription_model",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780717337226,
+      "tag": "0002_silly_may_parker",
+      "breakpoints": true
     }
   ]
 }

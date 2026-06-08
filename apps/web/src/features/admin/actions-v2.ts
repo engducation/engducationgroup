@@ -64,11 +64,7 @@ export async function adminCreateCourseAction(data: {
   description?: string;
   level: string;
   thumbnailUrl?: string;
-  certificateTemplateUrl?: string;
-  isFree?: boolean;
-  originalPrice?: number;
-  sellingPrice?: number;
-  accessDurationDays?: number | null;
+	certificateTemplateUrl?: string;
 }): Promise<ActionResult> {
   await requireAdmin();
   try {
@@ -89,10 +85,6 @@ export async function adminUpdateCourseAction(data: {
   level?: string;
   thumbnailUrl?: string;
   certificateTemplateUrl?: string;
-  isFree?: boolean;
-  originalPrice?: number;
-  sellingPrice?: number;
-  accessDurationDays?: number | null;
   status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
 }): Promise<ActionResult> {
   await requireAdmin();
@@ -438,18 +430,18 @@ export async function adminGetOrderAnalyticsAction() {
 }
 
 export async function adminCreateManualOrderAction(
-  userId: string,
-  courseId: string,
-  amount: number,
+	userId: string,
+	packageType: "MONTHLY" | "6_MONTH" | "YEAR",
+	amount: number,
 ): Promise<ActionResult> {
-  const admin = await requireAdmin();
-  try {
-    const data = await adminService.createAdminManualOrder(userId, courseId, amount, admin.id);
-    revalidatePath("/admin");
-    revalidatePath("/admin/dashboard");
-    revalidatePath("/admin/orders");
-    return { success: true, data };
-  } catch (err) {
+	const admin = await requireAdmin();
+	try {
+		const data = await adminService.createAdminManualOrder(userId, packageType, amount, admin.id);
+		revalidatePath("/admin");
+		revalidatePath("/admin/dashboard");
+		revalidatePath("/admin/orders");
+		return { success: true, data };
+	} catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Lỗi khi tạo đơn hàng thủ công" };
   }
 }

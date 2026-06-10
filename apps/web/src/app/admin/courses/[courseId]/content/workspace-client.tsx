@@ -39,7 +39,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -207,7 +206,6 @@ export default function AdminCourseContentWorkspaceClient({
 
   const [moduleTitle, setModuleTitle] = useState("");
   const [moduleDescription, setModuleDescription] = useState("");
-  const [moduleStatus, setModuleStatus] = useState<StatusValue>("DRAFT");
   const [moduleOrderIndex, setModuleOrderIndex] = useState("");
 
   const [lessonForm, setLessonForm] = useState(EMPTY_LESSON_FORM);
@@ -315,14 +313,13 @@ export default function AdminCourseContentWorkspaceClient({
         courseId,
         title: moduleTitle,
         description: moduleDescription || undefined,
-        status: moduleStatus,
+        status: "DRAFT",
         orderIndex: parseNumber(moduleOrderIndex),
       });
       toast.success("Đã tạo chương học");
       setOpenModuleDialog(false);
       setModuleTitle("");
       setModuleDescription("");
-      setModuleStatus("DRAFT");
       setModuleOrderIndex("");
       await refetch();
     } catch (err) {
@@ -520,43 +517,44 @@ export default function AdminCourseContentWorkspaceClient({
             />
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Tạo chương học</DialogTitle>
-                <DialogDescription>
-                  Chương học có thể tạo ở draft/published/paused và sắp xếp thứ tự ngay từ đầu.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 px-4 pb-2">
-                <div className="grid gap-2">
-                  <Label>Tên chương học</Label>
-                  <Input value={moduleTitle} onChange={(e) => setModuleTitle(e.target.value)} />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Mô tả</Label>
-                  <Textarea value={moduleDescription} onChange={(e) => setModuleDescription(e.target.value)} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <label className="grid gap-2">
-                      <span className="text-sm font-medium text-slate-900">Trạng thái</span>
-                      <select
-                        className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
-                        value={moduleStatus}
-                        onChange={(e) => setModuleStatus(e.target.value as StatusValue)}
-                      >
-                        {STATUS_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  <div className="grid gap-2">
-                    <Label>Thứ tự</Label>
-                    <Input
-                      type="number"
-                      value={moduleOrderIndex}
-                      onChange={(e) => setModuleOrderIndex(e.target.value)}
-                    />
+                <div className="flex items-center gap-3 pr-8">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+                    <Layers3 className="size-5" />
                   </div>
+                  <div>
+                    <DialogTitle className="text-left">Tạo chương học mới</DialogTitle>
+                    <DialogDescription className="text-left">
+                      Chương học sẽ được tạo ở trạng thái bản nháp. Bạn có thể chỉnh sửa trạng thái sau.
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+              <div className="space-y-4 px-1 pb-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Tên chương học *</label>
+                  <Input
+                    placeholder="VD: Chương 1 — Ngữ pháp cơ bản"
+                    value={moduleTitle}
+                    onChange={(e) => setModuleTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Mô tả</label>
+                  <Textarea
+                    placeholder="Mô tả ngắn gọn nội dung chương học..."
+                    className="resize-none text-sm"
+                    value={moduleDescription}
+                    onChange={(e) => setModuleDescription(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Thứ tự</label>
+                  <Input
+                    type="number"
+                    placeholder="1"
+                    value={moduleOrderIndex}
+                    onChange={(e) => setModuleOrderIndex(e.target.value)}
+                  />
                 </div>
               </div>
               <DialogFooter>
@@ -746,246 +744,365 @@ export default function AdminCourseContentWorkspaceClient({
 
       <Dialog open={Boolean(openLessonDialogForModule)} onOpenChange={(open) => !open && setOpenLessonDialogForModule(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{editingLesson ? "Chỉnh sửa bài học" : "Tạo bài học mới"}</DialogTitle>
-            <DialogDescription>
-              Tạo trực tiếp nội dung text, video, quiz hoặc writing trong chương học.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-6 px-4 pb-2">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label>Tên bài học</Label>
-                <Input
-                  value={lessonForm.title}
-                  onChange={(e) => setLessonForm((prev) => ({ ...prev, title: e.target.value }))}
-                />
+            <DialogHeader>
+              <div className="flex items-center gap-3 pr-8">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+                  <FileText className="size-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-left">{editingLesson ? "Chỉnh sửa bài học" : "Tạo bài học mới"}</DialogTitle>
+                  <DialogDescription className="text-left">
+                    {editingLesson ? "Cập nhật nội dung bài học hiện có." : "Tạo bài học mới — nội dung sẽ ở trạng thái bản nháp."}
+                  </DialogDescription>
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label>Loại nội dung</Label>
-                <select
-                  className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
-                  value={lessonForm.type}
-                  onChange={(e) => setLessonForm((prev) => ({ ...prev, type: e.target.value as LessonType }))}
-                >
-                  <option value="TEXT">Text lesson</option>
-                  <option value="VIDEO">Video lesson</option>
-                  <option value="QUIZ">Quiz</option>
-                  <option value="WRITING">Writing</option>
-                </select>
+            </DialogHeader>
+          <div className="space-y-6 px-4 pb-2">
+            {/* Basic info */}
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Thông tin cơ bản</p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Tên bài học *</label>
+                  <Input
+                    placeholder="VD: Bài 1 — Giới thiệu ngữ pháp"
+                    value={lessonForm.title}
+                    onChange={(e) => setLessonForm((prev) => ({ ...prev, title: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Loại nội dung</label>
+                  <select
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                    value={lessonForm.type}
+                    onChange={(e) => setLessonForm((prev) => ({ ...prev, type: e.target.value as LessonType }))}
+                  >
+                    <option value="TEXT">📄 Text lesson</option>
+                    <option value="VIDEO">🎬 Video lesson</option>
+                    <option value="QUIZ">❓ Quiz</option>
+                    <option value="WRITING">✍️ Writing</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-xs font-semibold text-slate-600">Mô tả ngắn</label>
+                  <Textarea
+                    placeholder="Mô tả ngắn gọn nội dung bài học..."
+                    value={lessonForm.description}
+                    className="resize-none"
+                    onChange={(e) => setLessonForm((prev) => ({ ...prev, description: e.target.value }))}
+                  />
+                </div>
+                {/* Status — only visible when editing existing lesson */}
+                {editingLesson ? (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">Trạng thái</label>
+                    <select
+                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                      value={lessonForm.status}
+                      onChange={(e) => setLessonForm((prev) => ({ ...prev, status: e.target.value as StatusValue }))}
+                    >
+                      {STATUS_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Thứ tự trong chương</label>
+                  <Input
+                    type="number"
+                    placeholder="1"
+                    value={lessonForm.orderIndex}
+                    onChange={(e) => setLessonForm((prev) => ({ ...prev, orderIndex: e.target.value }))}
+                  />
+                </div>
+                <div className="flex items-end pb-0.5">
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="size-4 rounded border-slate-300 text-indigo-600"
+                      checked={lessonForm.isRequired}
+                      onChange={(e) => setLessonForm((prev) => ({ ...prev, isRequired: e.target.checked }))}
+                    />
+                    <span className="text-sm font-medium text-slate-700">Bắt buộc hoàn thành</span>
+                  </label>
+                </div>
               </div>
-              <div className="grid gap-2 md:col-span-2">
-                <Label>Mô tả ngắn</Label>
-                <Textarea
-                  value={lessonForm.description}
-                  onChange={(e) => setLessonForm((prev) => ({ ...prev, description: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Trạng thái</Label>
-                <select
-                  className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
-                  value={lessonForm.status}
-                  onChange={(e) => setLessonForm((prev) => ({ ...prev, status: e.target.value as StatusValue }))}
-                >
-                  {STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Thứ tự trong chương</Label>
-                <Input
-                  type="number"
-                  value={lessonForm.orderIndex}
-                  onChange={(e) => setLessonForm((prev) => ({ ...prev, orderIndex: e.target.value }))}
-                />
-              </div>
-              <label className="flex items-center gap-3 md:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={lessonForm.isRequired}
-                  onChange={(e) => setLessonForm((prev) => ({ ...prev, isRequired: e.target.checked }))}
-                />
-                <span className="text-sm font-medium text-slate-900">Bắt buộc hoàn thành</span>
-              </label>
             </div>
 
             {lessonForm.type === "TEXT" ? (
-              <div className="grid gap-4 rounded-2xl border border-slate-200 p-4">
-                <p className="text-sm font-semibold text-slate-900">Nội dung text</p>
-                <Input
-                  placeholder="Tiêu đề bài text"
-                  value={textContent.title}
-                  onChange={(e) => setTextContent((prev) => ({ ...prev, title: e.target.value }))}
-                />
-                <Textarea
-                  placeholder="Nội dung text"
-                  className="min-h-40"
-                  value={textContent.content}
-                  onChange={(e) => setTextContent((prev) => ({ ...prev, content: e.target.value }))}
-                />
-                <Input
-                  placeholder="Keywords"
-                  value={textContent.keywords}
-                  onChange={(e) => setTextContent((prev) => ({ ...prev, keywords: e.target.value }))}
-                />
-                <Textarea
-                  placeholder="Learning objectives"
-                  value={textContent.learningObjectives}
-                  onChange={(e) =>
-                    setTextContent((prev) => ({ ...prev, learningObjectives: e.target.value }))
-                  }
-                />
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+                    <FileText className="size-4" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900">Nội dung Text</p>
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">Tiêu đề bài text</label>
+                    <Input
+                      placeholder="VD: Grammar Focus — Câu điều kiện loại 1"
+                      value={textContent.title}
+                      onChange={(e) => setTextContent((prev) => ({ ...prev, title: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">Nội dung bài học</label>
+                    <Textarea
+                      placeholder="Nhập nội dung bài học tại đây..."
+                      className="min-h-44 font-mono text-sm"
+                      value={textContent.content}
+                      onChange={(e) => setTextContent((prev) => ({ ...prev, content: e.target.value }))}
+                    />
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">Từ khóa</label>
+                      <Input
+                        placeholder="VD: conditionals, if, when"
+                        value={textContent.keywords}
+                        onChange={(e) => setTextContent((prev) => ({ ...prev, keywords: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">Mục tiêu bài học</label>
+                      <Input
+                        placeholder="VD: Hiểu cấu trúc câu điều kiện"
+                        value={textContent.learningObjectives}
+                        onChange={(e) =>
+                          setTextContent((prev) => ({ ...prev, learningObjectives: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : null}
 
             {lessonForm.type === "VIDEO" ? (
-              <div className="grid gap-4 rounded-2xl border border-slate-200 p-4">
-                <p className="text-sm font-semibold text-slate-900">Nội dung video</p>
-                <Input
-                  placeholder="Tiêu đề video"
-                  value={videoContent.title}
-                  onChange={(e) => setVideoContent((prev) => ({ ...prev, title: e.target.value }))}
-                />
-                <Textarea
-                  placeholder="Mô tả video"
-                  value={videoContent.description}
-                  onChange={(e) => setVideoContent((prev) => ({ ...prev, description: e.target.value }))}
-                />
-                <Input
-                  placeholder="Cloudinary public id"
-                  value={videoContent.cloudinaryPublicId}
-                  onChange={(e) =>
-                    setVideoContent((prev) => ({ ...prev, cloudinaryPublicId: e.target.value }))
-                  }
-                />
-                <Input
-                  placeholder="Cloudinary URL"
-                  value={videoContent.cloudinaryUrl}
-                  onChange={(e) => setVideoContent((prev) => ({ ...prev, cloudinaryUrl: e.target.value }))}
-                />
-                <Input
-                  type="number"
-                  placeholder="Duration (seconds)"
-                  value={videoContent.durationSeconds}
-                  onChange={(e) =>
-                    setVideoContent((prev) => ({ ...prev, durationSeconds: e.target.value }))
-                  }
-                />
-                <Textarea
-                  placeholder="Tài nguyên đi kèm / ghi chú"
-                  value={videoContent.resourceNotes}
-                  onChange={(e) => setVideoContent((prev) => ({ ...prev, resourceNotes: e.target.value }))}
-                />
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+                    <Video className="size-4" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900">Nội dung Video</p>
+                </div>
+                <div className="space-y-3">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">Tiêu đề video</label>
+                      <Input
+                        placeholder="VD: Bài giảng — Câu điều kiện"
+                        value={videoContent.title}
+                        onChange={(e) => setVideoContent((prev) => ({ ...prev, title: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">Thời lượng (giây)</label>
+                      <Input
+                        type="number"
+                        placeholder="600"
+                        value={videoContent.durationSeconds}
+                        onChange={(e) =>
+                          setVideoContent((prev) => ({ ...prev, durationSeconds: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">Mô tả video</label>
+                    <Textarea
+                      placeholder="Mô tả nội dung video..."
+                      className="resize-none"
+                      value={videoContent.description}
+                      onChange={(e) => setVideoContent((prev) => ({ ...prev, description: e.target.value }))}
+                    />
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">Cloudinary Public ID</label>
+                      <Input
+                        placeholder="folder/video-name"
+                        value={videoContent.cloudinaryPublicId}
+                        onChange={(e) =>
+                          setVideoContent((prev) => ({ ...prev, cloudinaryPublicId: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">Cloudinary URL</label>
+                      <Input
+                        placeholder="https://res.cloudinary.com/..."
+                        value={videoContent.cloudinaryUrl}
+                        onChange={(e) => setVideoContent((prev) => ({ ...prev, cloudinaryUrl: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">Tài nguyên / Ghi chú</label>
+                    <Textarea
+                      placeholder="Link tài liệu, transcript, hoặc ghi chú bổ sung..."
+                      className="resize-none"
+                      value={videoContent.resourceNotes}
+                      onChange={(e) => setVideoContent((prev) => ({ ...prev, resourceNotes: e.target.value }))}
+                    />
+                  </div>
+                </div>
               </div>
             ) : null}
 
             {lessonForm.type === "WRITING" ? (
-              <div className="grid gap-4 rounded-2xl border border-slate-200 p-4">
-                <p className="text-sm font-semibold text-slate-900">Bài tập writing</p>
-                <Input
-                  placeholder="Tiêu đề bài writing"
-                  value={writingContent.title}
-                  onChange={(e) => setWritingContent((prev) => ({ ...prev, title: e.target.value }))}
-                />
-                <Textarea
-                  placeholder="Đề bài / prompt"
-                  className="min-h-32"
-                  value={writingContent.prompt}
-                  onChange={(e) => setWritingContent((prev) => ({ ...prev, prompt: e.target.value }))}
-                />
-                <Textarea
-                  placeholder="Tiêu chí chấm / hướng dẫn"
-                  value={writingContent.gradingCriteria}
-                  onChange={(e) =>
-                    setWritingContent((prev) => ({ ...prev, gradingCriteria: e.target.value }))
-                  }
-                />
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Input
-                    type="number"
-                    placeholder="Word count guidance"
-                    value={writingContent.wordCountGuidance}
-                    onChange={(e) =>
-                      setWritingContent((prev) => ({ ...prev, wordCountGuidance: e.target.value }))
-                    }
-                  />
-                  <Input
-                    type="date"
-                    value={writingContent.dueDate}
-                    onChange={(e) => setWritingContent((prev) => ({ ...prev, dueDate: e.target.value }))}
-                  />
-                  <Input
-                    placeholder="AI prompt id"
-                    value={writingContent.aiPromptId}
-                    onChange={(e) => setWritingContent((prev) => ({ ...prev, aiPromptId: e.target.value }))}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Max AI revisions"
-                    value={writingContent.maxAiRevisions}
-                    onChange={(e) =>
-                      setWritingContent((prev) => ({ ...prev, maxAiRevisions: e.target.value }))
-                    }
-                  />
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                    <FilePenLine className="size-4" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900">Bài tập Writing</p>
                 </div>
-                <div className="grid gap-2">
-                  <Label>Trạng thái nhận bài</Label>
-                  <select
-                    className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
-                    value={writingContent.submissionMode}
-                    onChange={(e) =>
-                      setWritingContent((prev) => ({
-                        ...prev,
-                        submissionMode: e.target.value as "OPEN" | "CLOSED",
-                      }))
-                    }
-                  >
-                    <option value="OPEN">Open</option>
-                    <option value="CLOSED">Closed</option>
-                  </select>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">Tiêu đề bài viết</label>
+                    <Input
+                      placeholder="VD: Writing Task 1 —描描写圖表"
+                      value={writingContent.title}
+                      onChange={(e) => setWritingContent((prev) => ({ ...prev, title: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">Đề bài / Prompt</label>
+                    <Textarea
+                      placeholder="Nhập đề bài hoặc prompt cho bài viết..."
+                      className="min-h-28"
+                      value={writingContent.prompt}
+                      onChange={(e) => setWritingContent((prev) => ({ ...prev, prompt: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">Tiêu chí chấm điểm / Hướng dẫn</label>
+                    <Textarea
+                      placeholder="Mô tả tiêu chí chấm điểm, band descriptor, rubric..."
+                      className="min-h-24"
+                      value={writingContent.gradingCriteria}
+                      onChange={(e) =>
+                        setWritingContent((prev) => ({ ...prev, gradingCriteria: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">Số từ yêu cầu</label>
+                      <Input
+                        type="number"
+                        placeholder="150"
+                        value={writingContent.wordCountGuidance}
+                        onChange={(e) =>
+                          setWritingContent((prev) => ({ ...prev, wordCountGuidance: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">Hạn nộp</label>
+                      <Input
+                        type="date"
+                        value={writingContent.dueDate}
+                        onChange={(e) => setWritingContent((prev) => ({ ...prev, dueDate: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">Max AI revisions</label>
+                      <Input
+                        type="number"
+                        placeholder="5"
+                        value={writingContent.maxAiRevisions}
+                        onChange={(e) =>
+                          setWritingContent((prev) => ({ ...prev, maxAiRevisions: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">AI Prompt ID</label>
+                      <Input
+                        placeholder="prompt-uuid-..."
+                        value={writingContent.aiPromptId}
+                        onChange={(e) => setWritingContent((prev) => ({ ...prev, aiPromptId: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">Chế độ nhận bài</label>
+                      <select
+                        className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                        value={writingContent.submissionMode}
+                        onChange={(e) =>
+                          setWritingContent((prev) => ({
+                            ...prev,
+                            submissionMode: e.target.value as "OPEN" | "CLOSED",
+                          }))
+                        }
+                      >
+                        <option value="OPEN">Mở — có thể nộp lại nhiều lần</option>
+                        <option value="CLOSED">Đóng — chỉ nộp một lần</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : null}
 
             {lessonForm.type === "QUIZ" ? (
-              <div className="grid gap-4 rounded-2xl border border-slate-200 p-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Input
-                    placeholder="Tên quiz"
-                    value={quizTitle}
-                    onChange={(e) => setQuizTitle(e.target.value)}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Tỉ lệ đạt (%)"
-                    value={quizPassingPercentage}
-                    onChange={(e) => setQuizPassingPercentage(e.target.value)}
-                  />
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-600">
+                    <FileQuestion className="size-4" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900">Câu hỏi Quiz</p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">Tên quiz</label>
+                    <Input
+                      placeholder="VD: Kiểm tra từ vựng bài 1"
+                      value={quizTitle}
+                      onChange={(e) => setQuizTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">Tỉ lệ đạt (%)</label>
+                    <Input
+                      type="number"
+                      placeholder="70"
+                      value={quizPassingPercentage}
+                      onChange={(e) => setQuizPassingPercentage(e.target.value)}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-4">
                   {quizQuestions.map((question, questionIndex) => (
-                    <div key={questionIndex} className="rounded-xl border border-slate-200 p-4">
-                      <div className="mb-3 flex items-center justify-between">
-                        <p className="text-sm font-semibold text-slate-900">Câu hỏi {questionIndex + 1}</p>
+                    <div key={questionIndex} className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-slate-800">Câu {questionIndex + 1}</p>
                         {quizQuestions.length > 1 ? (
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50 h-7 px-2"
                             onClick={() =>
                               setQuizQuestions((prev) => prev.filter((_, index) => index !== questionIndex))
                             }
                           >
-                            Xóa câu hỏi
+                            <Trash2 className="size-3" />
+                            Xóa
                           </Button>
                         ) : null}
                       </div>
-                      <div className="grid gap-3">
+                      <div className="space-y-2">
                         <Textarea
-                          placeholder="Nội dung câu hỏi"
+                          placeholder="Nội dung câu hỏi..."
+                          className="resize-none text-sm"
                           value={question.question}
                           onChange={(e) =>
                             setQuizQuestions((prev) =>
@@ -995,80 +1112,96 @@ export default function AdminCourseContentWorkspaceClient({
                             )
                           }
                         />
-                        {question.options.map((option, optionIndex) => (
-                          <Input
-                            key={optionIndex}
-                            placeholder={`Đáp án ${optionIndex + 1}`}
-                            value={option}
-                            onChange={(e) =>
+                        <div className="space-y-2">
+                          {question.options.map((option, optionIndex) => (
+                            <div key={optionIndex} className="flex items-center gap-2">
+                              <span className="shrink-0 text-xs font-semibold text-slate-400 w-5 text-right">
+                                {String.fromCharCode(65 + optionIndex)}.
+                              </span>
+                              <Input
+                                placeholder={`Đáp án ${optionIndex + 1}`}
+                                value={option}
+                                onChange={(e) =>
+                                  setQuizQuestions((prev) =>
+                                    prev.map((item, index) =>
+                                      index === questionIndex
+                                        ? {
+                                            ...item,
+                                            options: item.options.map((opt, idx) =>
+                                              idx === optionIndex ? e.target.value : opt,
+                                            ),
+                                          }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                              />
+                              {optionIndex === question.correctOption ? (
+                                <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">✓ Đúng</span>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs rounded-lg"
+                            onClick={() =>
                               setQuizQuestions((prev) =>
                                 prev.map((item, index) =>
                                   index === questionIndex
-                                    ? {
-                                        ...item,
-                                        options: item.options.map((opt, idx) =>
-                                          idx === optionIndex ? e.target.value : opt,
-                                        ),
-                                      }
+                                    ? { ...item, options: [...item.options, ""] }
                                     : item,
                                 ),
                               )
                             }
+                          >
+                            <Plus className="size-3" />
+                            Thêm đáp án
+                          </Button>
+                          <select
+                            className="h-7 rounded-lg border border-slate-200 bg-white px-2 text-xs"
+                            value={String(question.correctOption)}
+                            onChange={(e) =>
+                              setQuizQuestions((prev) =>
+                                prev.map((item, index) =>
+                                  index === questionIndex
+                                    ? { ...item, correctOption: Number(e.target.value) }
+                                    : item,
+                                ),
+                              )
+                            }
+                          >
+                            {question.options.map((_, optionIndex) => (
+                              <option key={optionIndex} value={String(optionIndex)}>
+                                ✓ Đáp án đúng: {optionIndex + 1}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-600">Giải thích đáp án</label>
+                          <Textarea
+                            placeholder="Giải thích tại sao đáp án này là đúng..."
+                            className="resize-none text-sm"
+                            value={question.explanation}
+                            onChange={(e) =>
+                              setQuizQuestions((prev) =>
+                                prev.map((item, index) =>
+                                  index === questionIndex ? { ...item, explanation: e.target.value } : item,
+                                ),
+                              )
+                            }
                           />
-                        ))}
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                setQuizQuestions((prev) =>
-                                  prev.map((item, index) =>
-                                    index === questionIndex
-                                      ? { ...item, options: [...item.options, ""] }
-                                      : item,
-                                  ),
-                                )
-                              }
-                            >
-                              Thêm đáp án
-                            </Button>
-                            <select
-                              className="h-10 w-48 rounded-md border border-slate-200 bg-white px-3 text-sm"
-                              value={String(question.correctOption)}
-                              onChange={(e) =>
-                                setQuizQuestions((prev) =>
-                                  prev.map((item, index) =>
-                                    index === questionIndex
-                                      ? { ...item, correctOption: Number(e.target.value) }
-                                      : item,
-                                  ),
-                                )
-                              }
-                            >
-                              {question.options.map((_, optionIndex) => (
-                                <option key={optionIndex} value={String(optionIndex)}>
-                                  Đáp án đúng {optionIndex + 1}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        <Textarea
-                          placeholder="Giải thích đáp án"
-                          value={question.explanation}
-                          onChange={(e) =>
-                            setQuizQuestions((prev) =>
-                              prev.map((item, index) =>
-                                index === questionIndex ? { ...item, explanation: e.target.value } : item,
-                              ),
-                            )
-                          }
-                        />
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
                 <Button
                   variant="outline"
+                  className="w-full rounded-lg border-dashed border-slate-300 text-slate-600"
                   onClick={() =>
                     setQuizQuestions((prev) => [
                       ...prev,
@@ -1076,8 +1209,8 @@ export default function AdminCourseContentWorkspaceClient({
                     ])
                   }
                 >
-                  <Plus data-icon="inline-start" />
-                  Thêm câu hỏi
+                  <Plus className="size-4" />
+                  Thêm câu hỏi mới
                 </Button>
               </div>
             ) : null}
@@ -1094,60 +1227,103 @@ export default function AdminCourseContentWorkspaceClient({
       </Dialog>
 
       <Dialog open={Boolean(editingVocabulary)} onOpenChange={(open) => !open && setEditingVocabulary(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingVocabulary?.item ? "Chỉnh sửa từ vựng" : "Thêm từ vựng"}</DialogTitle>
-            <DialogDescription>Quản lý từ vựng riêng theo từng chương học.</DialogDescription>
+            <div className="flex items-center gap-3 pr-8">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                <BookOpenText className="size-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-left">
+                  {editingVocabulary?.item ? "Chỉnh sửa từ vựng" : "Thêm từ vựng mới"}
+                </DialogTitle>
+                <DialogDescription className="text-left">
+                  Quản lý từ vựng riêng theo từng chương học.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="grid gap-3 px-4 pb-2">
-            <Input
-              placeholder="Word"
-              value={vocabularyForm.word}
-              onChange={(e) => setVocabularyForm((prev) => ({ ...prev, word: e.target.value }))}
-            />
-            <Input
-              placeholder="Meaning"
-              value={vocabularyForm.meaning}
-              onChange={(e) => setVocabularyForm((prev) => ({ ...prev, meaning: e.target.value }))}
-            />
-            <Input
-              placeholder="Part of speech"
-              value={vocabularyForm.partOfSpeech}
-              onChange={(e) => setVocabularyForm((prev) => ({ ...prev, partOfSpeech: e.target.value }))}
-            />
-            <Input
-              placeholder="Phonetic"
-              value={vocabularyForm.phonetic}
-              onChange={(e) => setVocabularyForm((prev) => ({ ...prev, phonetic: e.target.value }))}
-            />
-            <Textarea
-              placeholder="Example"
-              value={vocabularyForm.example}
-              onChange={(e) => setVocabularyForm((prev) => ({ ...prev, example: e.target.value }))}
-            />
-            <Textarea
-              placeholder="Notes"
-              value={vocabularyForm.notes}
-              onChange={(e) => setVocabularyForm((prev) => ({ ...prev, notes: e.target.value }))}
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                type="number"
-                placeholder="Order index"
-                value={vocabularyForm.orderIndex}
-                onChange={(e) => setVocabularyForm((prev) => ({ ...prev, orderIndex: e.target.value }))}
+          <div className="space-y-3 px-1 pb-1">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">Từ *</label>
+                <Input
+                  placeholder="VD: abandon"
+                  value={vocabularyForm.word}
+                  onChange={(e) => setVocabularyForm((prev) => ({ ...prev, word: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">Nghĩa *</label>
+                <Input
+                  placeholder="VD: từ bỏ, rời bỏ"
+                  value={vocabularyForm.meaning}
+                  onChange={(e) => setVocabularyForm((prev) => ({ ...prev, meaning: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">Từ loại</label>
+                <Input
+                  placeholder="VD: verb, noun"
+                  value={vocabularyForm.partOfSpeech}
+                  onChange={(e) => setVocabularyForm((prev) => ({ ...prev, partOfSpeech: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">Phiên âm</label>
+                <Input
+                  placeholder="VD: /əˈbændən/"
+                  value={vocabularyForm.phonetic}
+                  onChange={(e) => setVocabularyForm((prev) => ({ ...prev, phonetic: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">Ví dụ</label>
+              <Textarea
+                placeholder="VD: They had to abandon the ship due to the storm."
+                className="resize-none text-sm"
+                value={vocabularyForm.example}
+                onChange={(e) => setVocabularyForm((prev) => ({ ...prev, example: e.target.value }))}
               />
-              <select
-                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
-                value={vocabularyForm.status}
-                onChange={(e) => setVocabularyForm((prev) => ({ ...prev, status: e.target.value as StatusValue }))}
-              >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">Ghi chú</label>
+              <Textarea
+                placeholder="Ghi chú thêm cho giáo viên hoặc học sinh..."
+                className="resize-none text-sm"
+                value={vocabularyForm.notes}
+                onChange={(e) => setVocabularyForm((prev) => ({ ...prev, notes: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">Thứ tự</label>
+                <Input
+                  type="number"
+                  placeholder="1"
+                  value={vocabularyForm.orderIndex}
+                  onChange={(e) => setVocabularyForm((prev) => ({ ...prev, orderIndex: e.target.value }))}
+                />
+              </div>
+              {editingVocabulary?.item ? (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Trạng thái</label>
+                  <select
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                    value={vocabularyForm.status}
+                    onChange={(e) => setVocabularyForm((prev) => ({ ...prev, status: e.target.value as StatusValue }))}
+                  >
+                    {STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
             </div>
           </div>
           <DialogFooter>

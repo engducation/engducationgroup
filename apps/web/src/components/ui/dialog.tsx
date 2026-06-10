@@ -46,14 +46,18 @@ function DialogPopup({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-transparent p-4 data-enter:animate-in data-enter:fade-in-0 data-enter:duration-200 data-enter:ease-out data-leave:animate-out data-leave:fade-out-0 data-leave:duration-150 data-leave:ease-in data-closed:pointer-events-none data-closed:opacity-0",
+          "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-transparent p-4",
+          "data-enter:animate-in data-enter:fade-in-0 data-enter:duration-200 data-enter:ease-out",
+          "data-leave:animate-out data-leave:fade-out-0 data-leave:duration-150 data-leave:ease-in",
+          "data-closed:pointer-events-none data-closed:opacity-0",
           className,
         )}
         {...props}
       >
         <div
           className={cn(
-            "relative z-50 w-full bg-background text-foreground shadow-lg ring-1 ring-foreground/10",
+            "relative z-50 w-full bg-background text-foreground shadow-xl ring-1 ring-black/10 rounded-2xl",
+            "my-auto", // explicit vertical centering inside flex container
             "data-enter:animate-in data-enter:fade-in-0 data-enter:zoom-in-95 data-enter:slide-in-from-bottom-4 data-enter:duration-200",
             "data-leave:animate-out data-leave:fade-out-0 data-leave:zoom-out-95 data-leave:slide-out-to-bottom-4 data-leave:duration-150",
           )}

@@ -7,22 +7,19 @@ import {
   BookOpen,
   LayoutDashboard,
   MessageSquareQuote,
+  PencilLine,
   ReceiptText,
-  ShieldCheck,
+  Settings,
+  Users,
 } from "lucide-react";
 
 const navItems: Array<{
   label: string;
   href: Route;
-  icon: typeof ShieldCheck;
+  icon: typeof LayoutDashboard;
 }> = [
   {
-    label: "Bàn điều hành",
-    href: "/admin",
-    icon: ShieldCheck,
-  },
-  {
-    label: "Dashboard",
+    label: "Tổng quan",
     href: "/admin/dashboard",
     icon: LayoutDashboard,
   },
@@ -32,14 +29,19 @@ const navItems: Array<{
     icon: BookOpen,
   },
   {
-    label: "Transactions & doanh thu",
+    label: "Giao dịch",
     href: "/admin/orders",
     icon: ReceiptText,
   },
   {
-    label: "Đánh giá học viên",
+    label: "Đánh giá",
     href: "/admin/reviews",
     icon: MessageSquareQuote,
+  },
+  {
+    label: "Kiểm duyệt",
+    href: "/admin/moderation",
+    icon: PencilLine,
   },
 ];
 
@@ -59,14 +61,25 @@ export default function AdminSidebarNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+            className={`group relative flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
               isActive
-                ? "bg-slate-800 text-white"
-                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/25"
+                : "text-slate-400 hover:bg-white/5 hover:text-white"
             }`}
           >
-            <Icon className="size-4" />
-            {item.label}
+            {isActive && (
+              <span className="absolute left-0 top-1/2 z-0 hidden h-8 w-1 -translate-y-1/2 rounded-r-full bg-white/30 sm:block" />
+            )}
+            <span
+              className={`relative z-10 flex size-7 items-center justify-center rounded-lg transition-colors ${
+                isActive
+                  ? "bg-white/20"
+                  : "bg-slate-800 group-hover:bg-indigo-600/20"
+              }`}
+            >
+              <Icon className="size-3.5" />
+            </span>
+            <span className="relative z-10">{item.label}</span>
           </Link>
         );
       })}

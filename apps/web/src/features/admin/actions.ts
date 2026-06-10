@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { desc } from "drizzle-orm";
 import type { ActionResult } from "@/features/learning-content/types";
-import * as adminService from "./services/admin.service";
+import * as adminService from "./services/admin-v2.service";
 
 // ─── AUTH GUARD ─────────────────────────────────────────────────────────────
 
@@ -24,11 +24,11 @@ interface AdminUser {
 async function requireAdmin(): Promise<AdminUser> {
   const session = await getSession();
   if (!session?.user) redirect("/login");
-  
+
   if (session.user.role !== "admin") {
     throw new Error("Không có quyền thực hiện thao tác này");
   }
-  
+
   return session.user as AdminUser;
 }
 
@@ -99,13 +99,13 @@ export async function adminDeletePromptAction(id: string): Promise<ActionResult>
 export async function adminUpdateGlobalLimitAction(limit: number): Promise<ActionResult> {
   const admin = await requireAdmin();
   try {
-    await adminService.updateSystemSetting(
-      "global_daily_limit",
-      limit.toString(),
-      admin.id,
-      admin.email,
-      admin.role || "admin",
-    );
+    await adminService.updateSystemSetting({
+      key: "global_daily_limit",
+      value: limit.toString(),
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminRole: admin.role || "admin",
+    });
     revalidatePath("/admin/dashboard");
     return { success: true, data: null };
   } catch (err) {
@@ -137,12 +137,12 @@ export async function adminGetAiCostAnalyticsAction() {
 
 export async function adminCreateManualOrderAction(
   userId: string,
-  courseId: string,
+  packageType: "MONTHLY" | "6_MONTH" | "YEAR",
   amount: number,
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
   try {
-    const orderId = await adminService.createManualOrder(userId, courseId, amount, admin.id);
+    const orderId = await adminService.createAdminManualOrder(userId, packageType, amount, admin.id);
     revalidatePath("/admin/orders");
     return { success: true, data: { orderId } };
   } catch (err) {
@@ -153,7 +153,7 @@ export async function adminCreateManualOrderAction(
 export async function adminApproveOrderAction(orderId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   try {
-    await adminService.approveOrder(orderId, admin.id);
+    await adminService.approveAdminOrder(orderId, admin.id);
     revalidatePath("/admin/orders");
     return { success: true, data: null };
   } catch (err) {
@@ -164,7 +164,7 @@ export async function adminApproveOrderAction(orderId: string): Promise<ActionRe
 export async function adminRejectOrderAction(orderId: string, reason: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   try {
-    await adminService.rejectOrder(orderId, reason, admin.id);
+    await adminService.rejectAdminOrder(orderId, reason, admin.id);
     revalidatePath("/admin/orders");
     return { success: true, data: null };
   } catch (err) {
@@ -175,7 +175,7 @@ export async function adminRejectOrderAction(orderId: string, reason: string): P
 export async function adminGetOrdersAction() {
   await requireAdmin();
   try {
-    const data = await adminService.getOrders();
+    const data = await adminService.getAdminOrders();
     return { success: true, data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Lỗi khi lấy danh sách đơn hàng" };
@@ -185,7 +185,7 @@ export async function adminGetOrdersAction() {
 export async function adminGetTransactionLogsAction() {
   await requireAdmin();
   try {
-    const data = await adminService.getTransactionAuditLogs();
+    const data = await adminService.getAdminTransactionLogs();
     return { success: true, data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Lỗi khi lấy log đối soát" };
@@ -258,7 +258,7 @@ export async function adminReplyTicketAction(ticketId: string, message: string):
   const admin = await requireAdmin();
   try {
     await adminService.replySupportTicket(ticketId, admin.id, message);
-    revalidatePath(`/admin/moderation`);
+    revalidatePath("/admin/moderation");
     return { success: true, data: null };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Lỗi khi gửi phản hồi" };
@@ -271,15 +271,15 @@ export async function adminBanUserAction(targetUserId: string, reason: string): 
   const admin = await requireAdmin();
   const { ipAddress, userAgent } = await getClientContext();
   try {
-    await adminService.banUser(
+    await adminService.banUser({
       targetUserId,
       reason,
-      admin.id,
-      admin.email,
-      admin.role || "admin",
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminRole: admin.role || "admin",
       ipAddress,
       userAgent,
-    );
+    });
     revalidatePath("/admin/users");
     return { success: true, data: null };
   } catch (err) {
@@ -291,14 +291,14 @@ export async function adminUnbanUserAction(targetUserId: string): Promise<Action
   const admin = await requireAdmin();
   const { ipAddress, userAgent } = await getClientContext();
   try {
-    await adminService.unbanUser(
+    await adminService.unbanUser({
       targetUserId,
-      admin.id,
-      admin.email,
-      admin.role || "admin",
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminRole: admin.role || "admin",
       ipAddress,
       userAgent,
-    );
+    });
     revalidatePath("/admin/users");
     return { success: true, data: null };
   } catch (err) {
@@ -319,7 +319,7 @@ export async function adminGetUsersModerationAction() {
 export async function adminGetAuditLogsAction() {
   await requireAdmin();
   try {
-    const data = await adminService.getAdminAuditLogs();
+    const data = await adminService.getAdminAuditLogsFromService();
     return { success: true, data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Lỗi khi lấy audit logs" };
@@ -329,9 +329,7 @@ export async function adminGetAuditLogsAction() {
 export async function adminGetCoursesAction() {
   await requireAdmin();
   try {
-    const { db } = await import("@/db");
-    const { course } = await import("@/db/schema/learning-content");
-    const data = await db.select().from(course).orderBy(desc(course.createdAt));
+    const data = await adminService.getAdminCourses();
     return { success: true, data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Lỗi khi lấy danh sách khóa học" };
@@ -348,7 +346,7 @@ export async function adminCreateCourseAction(data: {
 }): Promise<ActionResult> {
   await requireAdmin();
   try {
-    await adminService.createCourse(data);
+    await adminService.createAdminCourse(data);
     revalidatePath("/admin/courses");
     return { success: true, data: null };
   } catch (err) {
@@ -365,7 +363,7 @@ export async function adminUpdateCourseAction(data: {
 }): Promise<ActionResult> {
   await requireAdmin();
   try {
-    await adminService.updateCourse(data.id, data);
+    await adminService.updateAdminCourse(data.id, data);
     revalidatePath("/admin/courses");
     return { success: true, data: null };
   } catch (err) {
@@ -376,7 +374,7 @@ export async function adminUpdateCourseAction(data: {
 export async function adminDeleteCourseAction(id: string): Promise<ActionResult> {
   await requireAdmin();
   try {
-    await adminService.deleteCourse(id);
+    await adminService.deleteAdminCourse(id);
     revalidatePath("/admin/courses");
     return { success: true, data: null };
   } catch (err) {
@@ -387,7 +385,7 @@ export async function adminDeleteCourseAction(id: string): Promise<ActionResult>
 export async function adminGetModulesAction(courseId: string) {
   await requireAdmin();
   try {
-    const data = await adminService.getModules(courseId);
+    const data = await adminService.getModulesByCourse(courseId);
     return { success: true, data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Lỗi khi lấy danh sách Module" };
@@ -401,7 +399,7 @@ export async function adminCreateModuleAction(data: {
 }): Promise<ActionResult> {
   await requireAdmin();
   try {
-    await adminService.createModule(data);
+    await adminService.createAdminModule(data);
     revalidatePath("/admin/courses");
     return { success: true, data: null };
   } catch (err) {
@@ -416,7 +414,7 @@ export async function adminUpdateModuleAction(data: {
 }): Promise<ActionResult> {
   await requireAdmin();
   try {
-    await adminService.updateModule(data.id, data);
+    await adminService.updateAdminModule(data.id, data);
     revalidatePath("/admin/courses");
     return { success: true, data: null };
   } catch (err) {
@@ -427,7 +425,7 @@ export async function adminUpdateModuleAction(data: {
 export async function adminDeleteModuleAction(id: string): Promise<ActionResult> {
   await requireAdmin();
   try {
-    await adminService.deleteModule(id);
+    await adminService.deleteAdminModule(id);
     revalidatePath("/admin/courses");
     return { success: true, data: null };
   } catch (err) {
@@ -438,7 +436,7 @@ export async function adminDeleteModuleAction(id: string): Promise<ActionResult>
 export async function adminGetLessonsAction(moduleId: string) {
   await requireAdmin();
   try {
-    const data = await adminService.getLessons(moduleId);
+    const data = await adminService.getLessonsByModule(moduleId);
     return { success: true, data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Lỗi khi lấy danh sách Bài học" };
@@ -455,7 +453,7 @@ export async function adminCreateLessonAction(data: {
 }): Promise<ActionResult> {
   await requireAdmin();
   try {
-    await adminService.createLesson(data);
+    await adminService.createAdminLesson(data);
     revalidatePath("/admin/courses");
     return { success: true, data: null };
   } catch (err) {
@@ -473,7 +471,7 @@ export async function adminUpdateLessonAction(data: {
 }): Promise<ActionResult> {
   await requireAdmin();
   try {
-    await adminService.updateLesson(data.id, data);
+    await adminService.updateAdminLesson(data.id, data);
     revalidatePath("/admin/courses");
     return { success: true, data: null };
   } catch (err) {
@@ -484,7 +482,7 @@ export async function adminUpdateLessonAction(data: {
 export async function adminDeleteLessonAction(id: string): Promise<ActionResult> {
   await requireAdmin();
   try {
-    await adminService.deleteLesson(id);
+    await adminService.deleteAdminLesson(id);
     revalidatePath("/admin/courses");
     return { success: true, data: null };
   } catch (err) {
@@ -670,10 +668,7 @@ export async function adminDeleteQuizQuestionAction(id: string) {
 export async function adminGetAllCoursesForQuizAction() {
   await requireAdmin();
   try {
-    const { db } = await import("@/db");
-    const { course } = await import("@/db/schema/learning-content");
-    const { desc } = await import("drizzle-orm");
-    const data = await db.select().from(course).orderBy(desc(course.createdAt));
+    const data = await adminService.getAdminCourses();
     return { success: true, data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Lỗi khi lấy khóa học" };

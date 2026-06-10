@@ -11,7 +11,7 @@ export async function PATCH(
   try {
     const { reviewId } = await context.params;
     const body = await request.json();
-    const data = await adminService.updateAdminCourseReviewStatus(reviewId, body.status);
+    const data = await adminService.updateReviewStatus(reviewId, body.status);
     return apiOk(data);
   } catch (error) {
     return apiError(error, "Không thể cập nhật trạng thái đánh giá");

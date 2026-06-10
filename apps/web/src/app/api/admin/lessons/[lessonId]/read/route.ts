@@ -11,7 +11,7 @@ export async function PUT(
   try {
     const { lessonId } = await context.params;
     const body = await request.json();
-    const data = await adminService.upsertAdminLessonRead(lessonId, body);
+    const data = await adminService.upsertLessonRead(lessonId, body);
     return apiOk(data);
   } catch (error) {
     return apiError(error, "Không thể lưu nội dung đọc");

@@ -270,7 +270,7 @@ export async function adminUpsertLessonReadAction(data: {
 }): Promise<ActionResult> {
   await requireAdmin();
   try {
-    const saved = await adminService.upsertAdminLessonRead(data.lessonId, data);
+    const saved = await adminService.upsertLessonRead(data.lessonId, data);
     revalidatePath("/admin/courses");
     if (data.courseId) revalidatePath(`/admin/courses/${data.courseId}/content`);
     return { success: true, data: saved };
@@ -290,7 +290,13 @@ export async function adminUpsertLessonWriteAction(data: {
 }): Promise<ActionResult> {
   await requireAdmin();
   try {
-    const saved = await adminService.upsertAdminLessonWrite(data.lessonId, data);
+    const saved = await adminService.upsertLessonWrite(data.lessonId, {
+      prompt: data.prompt,
+      gradingCriteria: data.gradingCriteria,
+      wordCountGuidance: data.wordCountGuidance,
+      aiPromptId: data.aiPromptId,
+      maxAiRevisions: data.maxAiRevisions,
+    });
     revalidatePath("/admin/courses");
     if (data.courseId) revalidatePath(`/admin/courses/${data.courseId}/content`);
     return { success: true, data: saved };
@@ -310,7 +316,13 @@ export async function adminUpsertLessonVideoAction(data: {
 }): Promise<ActionResult> {
   await requireAdmin();
   try {
-    const saved = await adminService.upsertAdminLessonVideo(data.lessonId, data);
+    const saved = await adminService.upsertLessonVideo(data.lessonId, {
+      title: data.title,
+      description: data.description,
+      cloudinaryPublicId: data.cloudinaryPublicId,
+      cloudinaryUrl: data.cloudinaryUrl,
+      durationSeconds: data.durationSeconds,
+    });
     revalidatePath("/admin/courses");
     if (data.courseId) revalidatePath(`/admin/courses/${data.courseId}/content`);
     return { success: true, data: saved };
@@ -331,9 +343,7 @@ export async function adminUpsertLessonQuizAction(data: {
 }): Promise<ActionResult> {
   await requireAdmin();
   try {
-    const saved = await adminService.upsertAdminLessonQuiz(data.lessonId, {
-      title: undefined,
-      passingPercentage: null,
+    const saved = await adminService.upsertLessonQuiz(data.lessonId, {
       questions: data.questions,
     });
     revalidatePath("/admin/courses");
@@ -347,7 +357,7 @@ export async function adminUpsertLessonQuizAction(data: {
 export async function adminGetModuleVocabularyAction(moduleId: string) {
   await requireAdmin();
   try {
-    const data = await adminService.getAdminModuleVocabulary(moduleId);
+    const data = await adminService.getVocabulariesByModule(moduleId);
     return { success: true, data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Lỗi khi lấy vocabulary theo chương" };
@@ -495,7 +505,7 @@ export async function adminGetReviewsAction() {
 export async function adminReplyCourseReviewAction(reviewId: string, reply: string): Promise<ActionResult> {
   await requireAdmin();
   try {
-    const data = await adminService.replyAdminCourseReview(reviewId, reply);
+    const data = await adminService.replyCourseReview(reviewId, reply);
     revalidatePath("/admin/reviews");
     return { success: true, data };
   } catch (err) {
@@ -509,7 +519,7 @@ export async function adminUpdateCourseReviewStatusAction(
 ): Promise<ActionResult> {
   await requireAdmin();
   try {
-    const data = await adminService.updateAdminCourseReviewStatus(reviewId, status);
+    const data = await adminService.updateReviewStatus(reviewId, status);
     revalidatePath("/admin/reviews");
     return { success: true, data };
   } catch (err) {

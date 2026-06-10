@@ -11,7 +11,7 @@ export async function PUT(
   try {
     const { lessonId } = await context.params;
     const body = await request.json();
-    const data = await adminService.upsertAdminLessonQuiz(lessonId, body.questions);
+    const data = await adminService.upsertLessonQuiz(lessonId, body.questions);
     return apiOk(data);
   } catch (error) {
     return apiError(error, "Không thể lưu quiz");

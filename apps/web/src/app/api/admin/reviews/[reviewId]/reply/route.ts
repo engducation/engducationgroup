@@ -11,7 +11,7 @@ export async function POST(
   try {
     const { reviewId } = await context.params;
     const body = await request.json();
-    const data = await adminService.replyAdminCourseReview(reviewId, body.reply);
+    const data = await adminService.replyCourseReview(reviewId, body.reply);
     return apiOk(data);
   } catch (error) {
     return apiError(error, "Không thể phản hồi đánh giá");

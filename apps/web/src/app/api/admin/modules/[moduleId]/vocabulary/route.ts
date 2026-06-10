@@ -10,7 +10,7 @@ export async function GET(
 
   try {
     const { moduleId } = await context.params;
-    const data = await adminService.getAdminModuleVocabulary(moduleId);
+    const data = await adminService.getVocabulariesByModule(moduleId);
     return apiOk(data);
   } catch (error) {
     return apiError(error, "Không thể lấy vocabulary theo chương");

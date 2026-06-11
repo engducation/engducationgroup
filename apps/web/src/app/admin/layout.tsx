@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { auth } from "@/lib/auth";
+import { asSessionUser } from "@/types/session";
 
 function getInitials(name: string) {
   return name
@@ -41,8 +42,8 @@ export default async function AdminLayout({
     redirect("/login");
   }
 
-  // @ts-ignore - role is injected
-  if (session.user.role !== "admin") {
+  const user = asSessionUser(session.user);
+  if (user.role !== "admin") {
     redirect("/dashboard");
   }
 

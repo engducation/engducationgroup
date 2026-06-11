@@ -15,6 +15,17 @@ const ROLE_REDIRECTS = {
   user: "/dashboard",
 } as const;
 
+interface SessionUser {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image?: string | null;
+  role: string;
+  subscriptionPlan: string;
+  expiresAt: string | null;
+}
+
 async function redirectToRoleDashboard(
   router: ReturnType<typeof useRouter>,
   role: string | null | undefined,
@@ -44,8 +55,9 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
         },
         {
           onSuccess: async (ctx) => {
+            const user = ctx.data?.user as unknown as (SessionUser & { email: string }) | undefined;
             toast.success("Đăng nhập thành công");
-            await redirectToRoleDashboard(router, ctx.data?.user?.role);
+            await redirectToRoleDashboard(router, user?.role);
           },
           onError: (error) => {
             toast.error(error.error.message || error.error.statusText);

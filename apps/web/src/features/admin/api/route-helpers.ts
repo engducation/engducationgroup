@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { asSessionUser } from "@/types/session";
 
 export async function requireAdminRequest() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -9,7 +10,8 @@ export async function requireAdminRequest() {
     return { errorResponse: NextResponse.json({ error: "Unauthorized" }, { status: 401 }), admin: null };
   }
 
-  if (session.user.role !== "admin") {
+  const user = asSessionUser(session.user);
+  if (user.role !== "admin") {
     return { errorResponse: NextResponse.json({ error: "Forbidden" }, { status: 403 }), admin: null };
   }
 
@@ -19,7 +21,7 @@ export async function requireAdminRequest() {
       id: session.user.id,
       email: session.user.email,
       name: session.user.name,
-      role: session.user.role as string | undefined,
+      role: user.role as string | undefined,
     },
   };
 }

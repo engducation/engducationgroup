@@ -16,6 +16,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionResult } from "@/features/learning-content/types";
+import { asSessionUser } from "@/types/session";
 import * as courseService from "./services/course.service";
 import * as lessonService from "./services/lesson.service";
 import * as quizService from "./services/quiz.service";
@@ -42,7 +43,8 @@ async function getSession() {
 async function requireAdmin(): Promise<string> {
   const session = await getSession();
   if (!session?.user) redirect("/login");
-  if (session.user.role !== "admin") throw new Error("Không có quyền thực hiện thao tác này");
+  const user = asSessionUser(session.user);
+  if (user.role !== "admin") throw new Error("Không có quyền thực hiện thao tác này");
   return session.user.id;
 }
 

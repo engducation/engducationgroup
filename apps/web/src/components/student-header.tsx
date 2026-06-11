@@ -86,8 +86,8 @@ export function StudentHeaderClient({ user }: StudentHeaderClientProps) {
 
           <nav className="hidden md:flex items-center gap-1">
             {[
-              { href: "/dashboard", label: "Khóa học", icon: BookOpen, active: true },
-              { href: "/notebook", label: "Sổ từ vựng", icon: null, active: false },
+              { href: "/dashboard" as const, label: "Khóa học", icon: BookOpen, active: true },
+              { href: "/notebook" as const, label: "Sổ từ vựng", icon: null, active: false },
             ].map((item) => (
               <Link
                 key={item.href}

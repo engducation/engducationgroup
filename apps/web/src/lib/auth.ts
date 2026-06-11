@@ -31,29 +31,23 @@ export const auth = betterAuth({
         input: false,
       },
     },
-    model: {
-      safeAttributes: ["role", "subscriptionPlan"],
-    },
   },
-  hooks: {
+  databaseHooks: {
     user: {
-      // Ép buộc giá trị mặc định khi tạo tài khoản mới qua API sign-up:
-      // - role: "user" — vai trò mặc định, admin gán thủ công
-      // - emailVerified: true — đăng nhập ngay, không cần xác thực email
-      // - subscriptionPlan: "FREE" — tài khoản free, không truy cập khóa học
-      // - activatedAt/expiresAt: null — chưa có gói Premium
-      beforeCreate: async (user) => {
-        return {
-          data: {
-            ...user,
-            role: "user",
-            emailVerified: true,
-            subscriptionPlan: "FREE",
-            status: "ACTIVE",
-            activatedAt: null,
-            expiresAt: null,
-          },
-        };
+      create: {
+        async before(data) {
+          return {
+            data: {
+              ...data,
+              role: "user",
+              emailVerified: true,
+              subscriptionPlan: "FREE",
+              status: "ACTIVE",
+              activatedAt: null,
+              expiresAt: null,
+            },
+          };
+        },
       },
     },
   },

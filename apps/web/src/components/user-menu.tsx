@@ -16,6 +16,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface SessionUser {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image?: string | null;
+  role: string;
+  subscriptionPlan: string;
+  expiresAt: string | null;
+}
+
 export default function UserMenu() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
@@ -32,17 +43,19 @@ export default function UserMenu() {
     );
   }
 
+  const user = session.user as unknown as SessionUser;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="outline" />}>
-        {session.user.name}
+        {user.name}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-card">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>{session.user.email}</DropdownMenuItem>
-          {session.user.role === "admin" && (
+          <DropdownMenuItem>{user.email}</DropdownMenuItem>
+          {user.role === "admin" && (
             <DropdownMenuItem
               render={
                 <Link

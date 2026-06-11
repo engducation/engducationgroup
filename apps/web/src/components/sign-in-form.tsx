@@ -15,13 +15,21 @@ const ROLE_REDIRECTS = {
   user: "/dashboard",
 } as const;
 
-async function resolveRoleAfterSignIn() {
+interface SessionUser {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image?: string | null;
+  role: string;
+  subscriptionPlan: string;
+  expiresAt: string | null;
+}
+
+async function resolveRoleAfterSignIn(): Promise<string | null> {
   const session = await authClient.getSession();
-  const role = session.data?.user?.role;
-
-  console.info("[auth] resolved role after sign-in:", role, session.data?.user?.email);
-
-  return role;
+  const user = session.data?.user as unknown as SessionUser | undefined;
+  return user?.role ?? null;
 }
 
 async function redirectToRoleDashboard(
@@ -51,8 +59,9 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
         },
         {
           onSuccess: async (ctx) => {
-            const initialRole = ctx.data?.user?.role;
-            console.info("[auth] sign-in success role from callback:", initialRole, ctx.data?.user?.email);
+            const user = ctx.data?.user as (SessionUser & { email: string }) | undefined;
+            const initialRole = user?.role ?? null;
+            console.info("[auth] sign-in success role from callback:", initialRole, user?.email);
 
             const resolvedRole = initialRole ?? (await resolveRoleAfterSignIn());
 

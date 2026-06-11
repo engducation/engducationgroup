@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageUploadField } from "@/components/cloudinary";
 
 interface CourseFormState {
   title: string;
@@ -134,16 +135,12 @@ export function CourseEditSheet({
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">
-              Thumbnail URL
-            </label>
-            <Input
-              placeholder="https://example.com/thumbnail.jpg"
-              value={form.thumbnail}
-              onChange={(e) => updateForm("thumbnail", e.target.value)}
-            />
-          </div>
+          <ImageUploadField
+            label="Thumbnail"
+            value={form.thumbnail}
+            onChange={(url) => updateForm("thumbnail", url)}
+            hint="Ảnh đại diện hiển thị trong danh sách khóa học"
+          />
         </div>
 
         <SheetFooter className="pt-4 border-t">

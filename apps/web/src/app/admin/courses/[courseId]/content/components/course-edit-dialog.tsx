@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageUploadField } from "@/components/cloudinary";
 
 interface CourseFormState {
   title: string;
@@ -106,14 +107,12 @@ export function CourseEditDialog({
               />
             </div>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Thumbnail URL</label>
-            <Input
-              placeholder="https://example.com/thumbnail.jpg"
-              value={form.thumbnail}
-              onChange={(e) => updateForm("thumbnail", e.target.value)}
-            />
-          </div>
+          <ImageUploadField
+            label="Thumbnail"
+            value={form.thumbnail}
+            onChange={(url) => updateForm("thumbnail", url)}
+            hint="Ảnh đại diện hiển thị trong danh sách khóa học"
+          />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>

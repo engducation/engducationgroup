@@ -45,6 +45,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageUploadField } from "@/components/cloudinary";
 
 function StatusRow({ status }: { status: string }) {
   if (status === "PUBLISHED") {
@@ -198,22 +199,18 @@ export default function AdminCoursesPage() {
                   className="min-h-20 resize-none"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">Thumbnail URL</label>
-                <Input
-                  placeholder="https://..."
-                  value={form.thumbnailUrl}
-                  onChange={(e) => setForm((curr) => ({ ...curr, thumbnailUrl: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">Certificate template URL</label>
-                <Input
-                  placeholder="https://..."
-                  value={form.certificateTemplateUrl}
-                  onChange={(e) => setForm((curr) => ({ ...curr, certificateTemplateUrl: e.target.value }))}
-                />
-              </div>
+              <ImageUploadField
+                label="Thumbnail"
+                value={form.thumbnailUrl}
+                onChange={(url) => setForm((curr) => ({ ...curr, thumbnailUrl: url }))}
+                hint="Ảnh đại diện cho khóa học hiển thị trong danh sách"
+              />
+              <ImageUploadField
+                label="Mẫu chứng chỉ"
+                value={form.certificateTemplateUrl}
+                onChange={(url) => setForm((curr) => ({ ...curr, certificateTemplateUrl: url }))}
+                hint="Ảnh mẫu chứng chỉ sẽ được cấp cho học viên hoàn thành khóa học"
+              />
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>

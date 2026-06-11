@@ -7,12 +7,13 @@ export { ModuleAccordion } from "./module-accordion";
 export { SubWorkspaceHeader } from "./sub-workspace-header";
 export { StickyActionBar } from "./sticky-action-bar";
 
-// Lesson Editor Components
-export { TextLessonEditor } from "./text-lesson-editor";
-export { VideoLessonEditor } from "./video-lesson-editor";
-export { QuizLessonEditor } from "./quiz-lesson-editor";
-export { WritingLessonEditor } from "./writing-lesson-editor";
+// Lesson Editor Components (Legacy Dialog)
 export { LessonFormDialog } from "./lesson-form-dialog";
+
+// Sheet Components (New slide-over patterns)
+export { ModuleSheet } from "./module-sheet";
+export { CourseEditSheet } from "./course-edit-sheet";
+export { LessonCreateSheet } from "./lesson-create-sheet";
 
 // Legacy Components (for compatibility)
 export { LessonCard } from "./lesson-card";
@@ -25,4 +26,10 @@ export { DeleteConfirmDialog } from "./delete-confirm-dialog";
 export { CourseEditDialog } from "./course-edit-dialog";
 
 // Re-export types
-export type { WorkspaceLesson, WorkspaceVocabulary, WorkspaceModule, WorkspaceCourse, StatusValue, LessonType } from "./workspace-types";
+export type {
+  WorkspaceLesson,
+  WorkspaceModule,
+  WorkspaceCourse,
+  StatusValue,
+  LessonType,
+} from "./workspace-types";

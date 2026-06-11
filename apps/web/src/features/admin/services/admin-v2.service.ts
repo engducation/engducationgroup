@@ -64,6 +64,7 @@ export {
   createAdminLesson,
   updateAdminLesson,
   deleteAdminLesson,
+  updateLessonOrder,
   upsertLessonRead,
   upsertLessonWrite,
   upsertLessonVideo,
@@ -241,28 +242,19 @@ export async function publishAdminCourse(courseId: string) {
     throw new Error("Khóa học phải có ít nhất 1 chương học trước khi publish");
   }
 
-  await db.transaction(async (tx) => {
-    await tx.update(course).set({ status: "PUBLISHED", updatedAt: new Date() }).where(eq(course.id, courseId));
-    await tx
-      .update(module)
-      .set({ status: "PUBLISHED", updatedAt: new Date() })
-      .where(eq(module.courseId, courseId));
+  const moduleIds = modules.map((item) => item.id);
 
-    const moduleIds = modules.map((item) => item.id);
-    const lessons = await tx.query.lesson.findMany({ where: inArray(lesson.moduleId, moduleIds) });
+  // Update course status
+  await db.update(course).set({ status: "PUBLISHED", updatedAt: new Date() }).where(eq(course.id, courseId));
+  
+  // Update modules status
+  await db.update(module).set({ status: "PUBLISHED", updatedAt: new Date() }).where(eq(module.courseId, courseId));
 
-    if (lessons.length > 0) {
-      await tx
-        .update(lesson)
-        .set({ status: "PUBLISHED", updatedAt: new Date() })
-        .where(inArray(lesson.moduleId, moduleIds));
-    }
-
-    await tx
-      .update(moduleVocabulary)
-      .set({ status: "PUBLISHED", updatedAt: new Date() })
-      .where(inArray(moduleVocabulary.moduleId, moduleIds));
-  });
+  // Update lessons and vocabularies if there are modules
+  if (moduleIds.length > 0) {
+    await db.update(lesson).set({ status: "PUBLISHED", updatedAt: new Date() }).where(inArray(lesson.moduleId, moduleIds));
+    await db.update(moduleVocabulary).set({ status: "PUBLISHED", updatedAt: new Date() }).where(inArray(moduleVocabulary.moduleId, moduleIds));
+  }
 
   return serializeCourseRecord(await db.query.course.findFirst({ where: eq(course.id, courseId) }));
 }
@@ -272,21 +264,17 @@ export async function unpublishAdminCourse(courseId: string) {
   const modules = await db.query.module.findMany({ where: eq(module.courseId, courseId) });
   const moduleIds = modules.map((item) => item.id);
 
-  await db.transaction(async (tx) => {
-    await tx.update(course).set({ status: "DRAFT", updatedAt: new Date() }).where(eq(course.id, courseId));
-    await tx.update(module).set({ status: "DRAFT", updatedAt: new Date() }).where(eq(module.courseId, courseId));
+  // Update course status
+  await db.update(course).set({ status: "DRAFT", updatedAt: new Date() }).where(eq(course.id, courseId));
+  
+  // Update modules status
+  await db.update(module).set({ status: "DRAFT", updatedAt: new Date() }).where(eq(module.courseId, courseId));
 
-    if (moduleIds.length > 0) {
-      await tx
-        .update(lesson)
-        .set({ status: "DRAFT", updatedAt: new Date() })
-        .where(inArray(lesson.moduleId, moduleIds));
-      await tx
-        .update(moduleVocabulary)
-        .set({ status: "DRAFT", updatedAt: new Date() })
-        .where(inArray(moduleVocabulary.moduleId, moduleIds));
-    }
-  });
+  // Update lessons and vocabularies if there are modules
+  if (moduleIds.length > 0) {
+    await db.update(lesson).set({ status: "DRAFT", updatedAt: new Date() }).where(inArray(lesson.moduleId, moduleIds));
+    await db.update(moduleVocabulary).set({ status: "DRAFT", updatedAt: new Date() }).where(inArray(moduleVocabulary.moduleId, moduleIds));
+  }
 
   return serializeCourseRecord(await db.query.course.findFirst({ where: eq(course.id, courseId) }));
 }
@@ -296,24 +284,17 @@ export async function archiveAdminCourse(courseId: string) {
   const modules = await db.query.module.findMany({ where: eq(module.courseId, courseId) });
   const moduleIds = modules.map((item) => item.id);
 
-  await db.transaction(async (tx) => {
-    await tx.update(course).set({ status: "ARCHIVED", updatedAt: new Date() }).where(eq(course.id, courseId));
-    await tx
-      .update(module)
-      .set({ status: "ARCHIVED", updatedAt: new Date() })
-      .where(eq(module.courseId, courseId));
+  // Update course status
+  await db.update(course).set({ status: "ARCHIVED", updatedAt: new Date() }).where(eq(course.id, courseId));
+  
+  // Update modules status
+  await db.update(module).set({ status: "ARCHIVED", updatedAt: new Date() }).where(eq(module.courseId, courseId));
 
-    if (moduleIds.length > 0) {
-      await tx
-        .update(lesson)
-        .set({ status: "ARCHIVED", updatedAt: new Date() })
-        .where(inArray(lesson.moduleId, moduleIds));
-      await tx
-        .update(moduleVocabulary)
-        .set({ status: "ARCHIVED", updatedAt: new Date() })
-        .where(inArray(moduleVocabulary.moduleId, moduleIds));
-    }
-  });
+  // Update lessons and vocabularies if there are modules
+  if (moduleIds.length > 0) {
+    await db.update(lesson).set({ status: "ARCHIVED", updatedAt: new Date() }).where(inArray(lesson.moduleId, moduleIds));
+    await db.update(moduleVocabulary).set({ status: "ARCHIVED", updatedAt: new Date() }).where(inArray(moduleVocabulary.moduleId, moduleIds));
+  }
 
   return serializeCourseRecord(await db.query.course.findFirst({ where: eq(course.id, courseId) }));
 }

@@ -15,6 +15,8 @@ import {
   CreditCard,
   ShieldAlert,
   Sparkles,
+  Crown,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -75,7 +77,7 @@ export function StudentHeaderClient({ user }: StudentHeaderClientProps) {
       <div className="flex w-full items-center justify-between gap-8">
         {/* Left: Logo + Nav */}
         <div className="flex items-center gap-10">
-          <Link href="/dashboard" className="flex items-center gap-2.5 group">
+          <Link href="/account" className="flex items-center gap-2.5 group">
             <div className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/25 transition-transform group-hover:scale-105">
               <GraduationCap className="size-4 text-white" />
             </div>
@@ -86,7 +88,8 @@ export function StudentHeaderClient({ user }: StudentHeaderClientProps) {
 
           <nav className="hidden md:flex items-center gap-1">
             {[
-              { href: "/dashboard" as const, label: "Khóa học", icon: BookOpen, active: true },
+              { href: "/account" as const, label: "Tài khoản", icon: Crown, active: false },
+              { href: "/courses" as const, label: "Khóa học", icon: BookOpen, active: false },
               { href: "/notebook" as const, label: "Sổ từ vựng", icon: null, active: false },
             ].map((item) => (
               <Link
@@ -172,6 +175,18 @@ export function StudentHeaderClient({ user }: StudentHeaderClientProps) {
                 </p>
                 <p className="text-xs text-muted-foreground">{user?.email}</p>
               </div>
+              {user?.role === "admin" && (
+                <>
+                  <Link
+                    href="/admin/dashboard"
+                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                  >
+                    <LayoutDashboard className="mr-2 size-4 text-indigo-500" />
+                    Bảng điều khiển Admin
+                  </Link>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem className="gap-2 py-2">
                 <User className="size-4 text-slate-500" />
                 Hồ sơ cá nhân

@@ -30,7 +30,7 @@ export function apiOk<T>(data: T, init?: ResponseInit) {
   return NextResponse.json({ data }, init);
 }
 
-export function apiError(error: unknown, fallbackMessage = "Internal Server Error") {
+export function apiError(error: unknown, fallbackMessage = "Internal Server Error", status = 500) {
   const message = error instanceof Error ? error.message : fallbackMessage;
-  return NextResponse.json({ error: message }, { status: 500 });
+  return NextResponse.json({ error: message }, { status });
 }

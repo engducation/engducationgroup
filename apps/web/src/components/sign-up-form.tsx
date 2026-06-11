@@ -12,7 +12,7 @@ import Loader from "./loader";
 
 const ROLE_REDIRECTS = {
   admin: "/admin/dashboard",
-  user: "/dashboard",
+  user: "/account",
 } as const;
 
 interface SessionUser {

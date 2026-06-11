@@ -115,6 +115,19 @@ export async function deleteAdminLesson(lessonId: string) {
   return { id: lessonId };
 }
 
+export async function updateLessonOrder(lessonId: string, orderIndex: number, moduleId?: string) {
+  const updateData: { orderIndex: number; moduleId?: string } = { orderIndex };
+  if (moduleId) {
+    updateData.moduleId = moduleId;
+  }
+
+  await db.update(lesson)
+    .set({ orderIndex, updatedAt: new Date() })
+    .where(eq(lesson.id, lessonId));
+
+  return { id: lessonId, orderIndex };
+}
+
 export async function upsertLessonRead(lessonId: string, data: { title: string; content: string }) {
   await ensureLessonExists(lessonId);
 
@@ -215,9 +228,19 @@ export async function upsertLessonVideo(lessonId: string, data: {
 }
 
 export async function upsertLessonQuiz(lessonId: string, data: {
-  questions: AdminQuizQuestionInput[]
+  title?: string;
+  passingPercentage?: number | null;
+  questions: AdminQuizQuestionInput[];
 }) {
   await ensureLessonExists(lessonId);
+
+  // Filter out empty questions (questions without text)
+  const validQuestions = data.questions.filter((q) => q.question.trim() !== "");
+
+  // If no valid questions, return early
+  if (validQuestions.length === 0) {
+    return { success: true, message: "No valid questions to save" };
+  }
 
   const existing = await db.query.quiz.findFirst({ where: eq(quiz.lessonId, lessonId) });
 
@@ -231,25 +254,25 @@ export async function upsertLessonQuiz(lessonId: string, data: {
     id: quizId,
     lessonId,
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
   });
 
-  for (let i = 0; i < data.questions.length; i++) {
-    const q = data.questions[i];
+  for (let i = 0; i < validQuestions.length; i++) {
+    const q = validQuestions[i];
     await db.insert(quizQuestion).values({
       id: nanoid(),
       quizId,
       question: q.question,
-      options: JSON.stringify(q.options),
-      correctOption: q.correctOption,
-      explanation: q.explanation,
+      options: JSON.stringify(q.options || []),
+      correctOption: q.correctOption ?? 0,
+      explanation: q.explanation ?? "",
       orderIndex: i,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
   }
 
-  return { success: true };
+  return { success: true, quizId, questionCount: validQuestions.length };
 }
 
 export async function getLessonContent(lessonId: string) {

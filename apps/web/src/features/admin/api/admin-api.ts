@@ -162,6 +162,11 @@ export const adminApi = {
     return unwrap(response.data);
   },
 
+  getLessonById: async (lessonId: string) => {
+    const response = await adminApiClient.get(ADMIN_API_ENDPOINTS.lessonDetail(lessonId));
+    return unwrap(response.data);
+  },
+
   reorderLessons: async (moduleId: string, lessons: { id: string; orderIndex: number }[]) => {
     const response = await adminApiClient.post(
       `${ADMIN_API_ENDPOINTS.modules}/${moduleId}/reorder-lessons`,
@@ -219,28 +224,24 @@ export const adminApi = {
   },
 
   // Lesson Vocabulary
+  upsertLessonVocabulary: async (
+    lessonId: string,
+    vocabularyList: Array<{
+      id?: string;
+      word: string;
+      meaning: string;
+      partOfSpeech: string;
+      phonetic?: string;
+      example?: string;
+      notes?: string;
+    }>
+  ) => {
+    const response = await adminApiClient.post(`${ADMIN_API_ENDPOINTS.lessonVocabulary(lessonId)}/sync`, { vocabulary: vocabularyList });
+    return unwrap(response.data);
+  },
+
   getLessonVocabulary: async (lessonId: string) => {
     const response = await adminApiClient.get(ADMIN_API_ENDPOINTS.lessonVocabulary(lessonId));
-    return unwrap(response.data);
-  },
-
-  addLessonVocabulary: async (lessonId: string, payload: { word: string; meaning: string; partOfSpeech: string; phonetic?: string; example?: string; notes?: string }) => {
-    const response = await adminApiClient.post(ADMIN_API_ENDPOINTS.lessonVocabulary(lessonId), payload);
-    return unwrap(response.data);
-  },
-
-  updateLessonVocabulary: async (vocabularyId: string, payload: Partial<{ word: string; meaning: string; partOfSpeech: string; phonetic: string; example: string; notes: string; status: string }>) => {
-    const response = await adminApiClient.patch(ADMIN_API_ENDPOINTS.lessonVocabularyDetail(vocabularyId), payload);
-    return unwrap(response.data);
-  },
-
-  deleteLessonVocabulary: async (vocabularyId: string) => {
-    const response = await adminApiClient.delete(ADMIN_API_ENDPOINTS.lessonVocabularyDetail(vocabularyId));
-    return unwrap(response.data);
-  },
-
-  syncLessonVocabulary: async (lessonId: string, vocabularyList: Array<{ id?: string; word: string; meaning: string; partOfSpeech: string; phonetic?: string; example?: string; notes?: string }>) => {
-    const response = await adminApiClient.post(`${ADMIN_API_ENDPOINTS.lessonVocabulary(lessonId)}/sync`, { vocabulary: vocabularyList });
     return unwrap(response.data);
   },
 

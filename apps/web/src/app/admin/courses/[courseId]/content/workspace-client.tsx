@@ -1,32 +1,36 @@
 "use client";
 
 import { useMemo, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import {
+  Pencil,
+  Trash2,
+  FileText,
+  Video,
+  FileQuestion,
+  FilePenLine,
+  BookOpen,
+} from "lucide-react";
 
 import { adminApi } from "@/features/admin/api/admin-api";
 import { useAdminCourseContentWorkspace } from "@/features/admin/hooks/use-admin-api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 import {
   CourseHeaderBanner,
   ModuleAccordion,
-  VocabularyFormDialog,
-  ModuleFormDialog,
+  ModuleSheet,
   DeleteConfirmDialog,
-  CourseEditDialog,
+  LessonCreateSheet,
 } from "./components";
-import { LessonFormDialog } from "./components/lesson-form-dialog";
 
-import type {
-  StatusValue,
-  WorkspaceLesson,
-  WorkspaceVocabulary,
-  WorkspaceModule,
-  WorkspaceCourse,
-  LessonType,
-} from "./components";
+import type { WorkspaceLesson, WorkspaceModule, WorkspaceCourse } from "./components";
+
+type LessonType = "TEXT" | "VIDEO" | "QUIZ" | "WRITING" | "VOCABULARY";
 
 interface AiPromptOption {
   id: string;
@@ -38,82 +42,6 @@ interface AiPromptOption {
   maxTokens: number;
 }
 
-// Re-export LessonType for backward compatibility
-export type { LessonType } from "./components";
-
-// Type aliases for internal use
-type FormLessonType = "TEXT" | "VIDEO" | "QUIZ" | "WRITING" | "VOCABULARY";
-
-// Form State Constants
-const EMPTY_LESSON_FORM = {
-  title: "",
-  description: "",
-  type: "TEXT" as FormLessonType,
-  status: "DRAFT" as StatusValue,
-  isRequired: true,
-};
-
-const EMPTY_TEXT_CONTENT = {
-  title: "",
-  content: "",
-  keywords: "",
-  learningObjectives: "",
-};
-
-const EMPTY_VIDEO_CONTENT = {
-  title: "",
-  description: "",
-  cloudinaryPublicId: "",
-  cloudinaryUrl: "",
-  durationSeconds: "",
-  resourceNotes: "",
-};
-
-const EMPTY_WRITING_CONTENT = {
-  title: "",
-  prompt: "",
-  gradingCriteria: "",
-  wordCountGuidance: "",
-  aiPromptId: "",
-  maxAiRevisions: "5",
-  dueDate: "",
-  submissionMode: "OPEN" as "OPEN" | "CLOSED",
-};
-
-const EMPTY_VOCABULARY_FORM: {
-  word: string;
-  meaning: string;
-  partOfSpeech: string;
-  phonetic: string;
-  example: string;
-  notes: string;
-  orderIndex: string;
-  status: StatusValue;
-} = {
-  word: "",
-  meaning: "",
-  partOfSpeech: "noun",
-  phonetic: "",
-  example: "",
-  notes: "",
-  orderIndex: "",
-  status: "DRAFT",
-};
-
-function parseNumber(value: string) {
-  if (!value.trim()) return undefined;
-  const parsed = Number(value);
-  return Number.isNaN(parsed) ? undefined : parsed;
-}
-
-function normalizeLessonType(lesson: WorkspaceLesson): FormLessonType {
-  if (lesson.video) return "VIDEO";
-  if (lesson.quiz) return "QUIZ";
-  if (lesson.write) return "WRITING";
-  if ((lesson as Record<string, unknown>).vocabulary) return "VOCABULARY";
-  return "TEXT";
-}
-
 export default function AdminCourseContentWorkspaceClient({
   courseId,
   aiPrompts = [],
@@ -121,421 +49,103 @@ export default function AdminCourseContentWorkspaceClient({
   courseId: string;
   aiPrompts?: AiPromptOption[];
 }) {
+  const router = useRouter();
   const { data, isLoading, error, refetch } = useAdminCourseContentWorkspace(courseId);
   const course = data as WorkspaceCourse | null;
-  const modules = useMemo((): WorkspaceModule[] => course?.modules ?? [], [course]);
+  const modules = useMemo((): WorkspaceModule[] => {
+    return course?.modules ?? [];
+  }, [course]);
 
-  // Lesson dialog state
-  const [editingLesson, setEditingLesson] = useState<WorkspaceLesson | null>(null);
-  const [creatingLessonForModuleId, setCreatingLessonForModuleId] = useState<string | null>(null);
-  const [openLessonDialog, setOpenLessonDialog] = useState(false);
-  const [lessonForm, setLessonForm] = useState(EMPTY_LESSON_FORM);
-  const [textContent, setTextContent] = useState(EMPTY_TEXT_CONTENT);
-  const [videoContent, setVideoContent] = useState(EMPTY_VIDEO_CONTENT);
-  const [writingContent, setWritingContent] = useState(EMPTY_WRITING_CONTENT);
-  const [quizTitle, setQuizTitle] = useState("");
-  const [quizPassingPercentage, setQuizPassingPercentage] = useState("");
-  const [quizQuestions, setQuizQuestions] = useState([
-    { question: "", options: ["", ""], correctOption: 0, explanation: "" },
-  ]);
-
-  // Module form state
-  const [openModuleDialog, setOpenModuleDialog] = useState(false);
+  // Module sheet state
+  const [openModuleSheet, setOpenModuleSheet] = useState(false);
   const [moduleTitle, setModuleTitle] = useState("");
   const [moduleDescription, setModuleDescription] = useState("");
-
-  // Vocabulary form state
-  const [editingVocabulary, setEditingVocabulary] = useState<{
-    moduleId: string;
-    item: WorkspaceVocabulary | null;
-  } | null>(null);
-  const [vocabularyForm, setVocabularyForm] = useState(EMPTY_VOCABULARY_FORM);
-
-  // Module editing state
   const [editingModule, setEditingModule] = useState<WorkspaceModule | null>(null);
+
+  // Lesson create sheet state
+  const [openLessonCreateSheet, setOpenLessonCreateSheet] = useState(false);
+  const [creatingLessonForModuleId, setCreatingLessonForModuleId] = useState<string | null>(null);
 
   // Delete confirmation state
   const [deleteConfirm, setDeleteConfirm] = useState<{
-    type: "lesson" | "module" | "vocabulary";
+    type: "lesson" | "module";
     id: string;
     name: string;
   } | null>(null);
 
-  // Course editing state
-  const [openCourseEditDialog, setOpenCourseEditDialog] = useState(false);
-  const [courseEditForm, setCourseEditForm] = useState({
-    title: "",
-    description: "",
-    shortDescription: "",
-    thumbnail: "",
-    level: "BEGINNER",
-    language: "English",
-  });
-
   // Submitting state
   const [submitting, setSubmitting] = useState(false);
 
-  // Reset lesson forms
-  const resetLessonForms = useCallback(() => {
-    setLessonForm(EMPTY_LESSON_FORM);
-    setTextContent(EMPTY_TEXT_CONTENT);
-    setVideoContent(EMPTY_VIDEO_CONTENT);
-    setWritingContent(EMPTY_WRITING_CONTENT);
-    setQuizTitle("");
-    setQuizPassingPercentage("");
-    setQuizQuestions([
-      { question: "", options: ["", ""], correctOption: 0, explanation: "" },
-    ]);
-  }, []);
+  // Publishing/Unpublishing state
+  const [isPublishing, setIsPublishing] = useState(false);
 
-  // Open lesson dialog for creating new lesson
+  // Reordering state (per module)
+  const [reorderingModules, setReorderingModules] = useState<Record<string, boolean>>({});
+
+  // Navigation to lesson config page
+  const navigateToLesson = useCallback(
+    (lesson: WorkspaceLesson) => {
+      router.push(`/admin/courses/${courseId}/lessons/${lesson.id}` as `string` as Parameters<typeof router.push>[0]);
+    },
+    [courseId, router]
+  );
+
+  // Open lesson create sheet
   const openCreateLessonDialog = useCallback((moduleId: string) => {
-    setEditingLesson(null);
     setCreatingLessonForModuleId(moduleId);
-    resetLessonForms();
-    setOpenLessonDialog(true);
-  }, [resetLessonForms]);
-
-  // Open lesson dialog for editing existing lesson
-  const openEditLessonDialog = useCallback((lesson: WorkspaceLesson) => {
-    const detectedType = normalizeLessonType(lesson);
-    setLessonForm({
-      title: lesson.title,
-      description: lesson.description ?? "",
-      type: detectedType,
-      status: lesson.status,
-      isRequired: lesson.isRequired,
-    });
-
-    setTextContent({
-      title: lesson.read?.title ?? lesson.title,
-      content: lesson.read?.content ?? "",
-      keywords: lesson.read?.keywords ?? "",
-      learningObjectives: lesson.read?.learningObjectives ?? "",
-    });
-
-    setVideoContent({
-      title: lesson.video?.title ?? lesson.title,
-      description: lesson.video?.description ?? "",
-      cloudinaryPublicId: lesson.video?.cloudinaryPublicId ?? "",
-      cloudinaryUrl: lesson.video?.cloudinaryUrl ?? "",
-      durationSeconds: lesson.video?.durationSeconds
-        ? String(lesson.video.durationSeconds)
-        : "",
-      resourceNotes: "",
-    });
-
-    const [writeTitle, ...writePromptLines] = (lesson.write?.prompt ?? "").split(
-      "\n\n"
-    );
-    setWritingContent({
-      title: lesson.write?.prompt ? writeTitle : lesson.title,
-      prompt: writePromptLines.join("\n\n") || lesson.write?.prompt || "",
-      gradingCriteria: lesson.write?.gradingCriteria ?? "",
-      wordCountGuidance: lesson.write?.wordCountGuidance
-        ? String(lesson.write.wordCountGuidance)
-        : "",
-      aiPromptId: lesson.write?.aiPromptId ?? "",
-      maxAiRevisions: String(lesson.write?.maxAiRevisions ?? 5),
-      dueDate: "",
-      submissionMode: lesson.write?.gradingCriteria?.includes(
-        "Submission mode: CLOSED"
-      )
-        ? "CLOSED"
-        : "OPEN",
-    });
-
-    setQuizTitle(
-      lesson.description?.startsWith("Quiz: ")
-        ? lesson.description.replace(/^Quiz:\s*/, "").split("\n")[0]
-        : ""
-    );
-    setQuizPassingPercentage(
-      lesson.description?.includes("Passing:")
-        ? lesson.description.split("Passing:")[1]?.replace("%", "").trim() || ""
-        : ""
-    );
-    setQuizQuestions(
-      lesson.quiz?.questions?.length
-        ? lesson.quiz.questions.map((item: { question: string; options?: string; correctOption?: number; explanation?: string }) => ({
-            question: item.question ?? "",
-            options: item.options
-              ? (JSON.parse(item.options) as string[])
-              : ["", ""],
-            correctOption: item.correctOption ?? 0,
-            explanation: item.explanation ?? "",
-          }))
-        : [{ question: "", options: ["", ""], correctOption: 0, explanation: "" }]
-    );
-
-    setEditingLesson(lesson);
-    setCreatingLessonForModuleId(null);
-    setOpenLessonDialog(true);
+    setOpenLessonCreateSheet(true);
   }, []);
 
-  // Close lesson dialog
-  const closeLessonDialog = useCallback(() => {
-    setOpenLessonDialog(false);
-    setEditingLesson(null);
-    setCreatingLessonForModuleId(null);
-    resetLessonForms();
-  }, [resetLessonForms]);
-
-  // Handlers
-  const handleCreateModule = async () => {
-    if (!moduleTitle.trim()) {
-      toast.error("Vui lòng nhập tên chương học");
-      return;
-    }
+  // Create lesson handler
+  const handleCreateLesson = async (title: string, type: LessonType) => {
+    if (!creatingLessonForModuleId) return;
 
     setSubmitting(true);
     try {
-      await adminApi.createModule({
-        courseId,
-        title: moduleTitle,
-        description: moduleDescription || undefined,
+      const result = await adminApi.createLesson({
+        moduleId: creatingLessonForModuleId,
+        title,
         status: "DRAFT",
-      });
-      toast.success("Đã tạo chương học");
-      setOpenModuleDialog(false);
-      setModuleTitle("");
-      setModuleDescription("");
+        isRequired: false,
+        hasRead: type === "TEXT",
+        hasVideo: type === "VIDEO",
+        hasQuiz: type === "QUIZ",
+        hasWrite: type === "WRITING",
+        hasVocabulary: type === "VOCABULARY",
+      }) as { id: string };
+
+      toast.success("Đã tạo bài học");
+      setOpenLessonCreateSheet(false);
+      setCreatingLessonForModuleId(null);
       await refetch();
+
+      // Navigate to lesson config page
+      router.push(`/admin/courses/${courseId}/lessons/${result.id}` as `string` as Parameters<typeof router.push>[0]);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Không thể tạo chương học"
+        err instanceof Error ? err.message : "Không thể tạo bài học"
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handlePublishCourse = async () => {
-    try {
-      await adminApi.publishCourse(courseId);
-      toast.success("Đã publish toàn bộ khóa học");
-      await refetch();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Không thể publish khóa học"
-      );
-    }
-  };
-
-  const handleUnpublishCourse = async () => {
-    try {
-      await adminApi.unpublishCourse(courseId);
-      toast.success("Đã hủy publish khóa học");
-      await refetch();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Không thể hủy publish khóa học"
-      );
-    }
-  };
-
-  // Handle save lesson from dialog
-  const handleSaveLessonFromDialog = async (data: {
-    lessonForm: typeof EMPTY_LESSON_FORM;
-    textContent: typeof EMPTY_TEXT_CONTENT;
-    videoContent: typeof EMPTY_VIDEO_CONTENT;
-    writingContent: typeof EMPTY_WRITING_CONTENT;
-    quizTitle: string;
-    quizPassingPercentage: string;
-    quizQuestions: Array<{
-      question: string;
-      options: string[];
-      correctOption: number;
-      explanation: string;
-    }>;
-  }) => {
-    if (!data.lessonForm.title.trim()) {
-      toast.error("Vui lòng nhập tên bài học");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const lessonPayload = {
-        title: data.lessonForm.title,
-        description: data.lessonForm.description || undefined,
-        status: data.lessonForm.status,
-        isRequired: data.lessonForm.isRequired,
-        hasRead: data.lessonForm.type === "TEXT",
-        hasVideo: data.lessonForm.type === "VIDEO",
-        hasQuiz: data.lessonForm.type === "QUIZ",
-        hasWrite: data.lessonForm.type === "WRITING",
-        hasVocabulary: data.lessonForm.type === "VOCABULARY",
-      };
-
-      let lessonId: string;
-
-      if (editingLesson) {
-        const updated = (await adminApi.updateLesson(
-          editingLesson.id,
-          lessonPayload
-        )) as { id: string };
-        lessonId = updated.id;
-      } else if (creatingLessonForModuleId) {
-        const created = (await adminApi.createLesson({
-          moduleId: creatingLessonForModuleId,
-          ...lessonPayload,
-        })) as { id: string };
-        lessonId = created.id;
-      } else {
-        throw new Error("No module specified for new lesson");
-      }
-
-      if (data.lessonForm.type === "TEXT") {
-        await adminApi.upsertLessonRead(lessonId, {
-          title: data.textContent.title || data.lessonForm.title,
-          content: data.textContent.content,
-          keywords: data.textContent.keywords || undefined,
-          learningObjectives: data.textContent.learningObjectives || undefined,
-        });
-      }
-
-      if (data.lessonForm.type === "VIDEO") {
-        await adminApi.upsertLessonVideo(lessonId, {
-          title: data.videoContent.title || data.lessonForm.title,
-          description: data.videoContent.description || undefined,
-          cloudinaryPublicId: data.videoContent.cloudinaryPublicId,
-          cloudinaryUrl: data.videoContent.cloudinaryUrl,
-          durationSeconds: parseNumber(data.videoContent.durationSeconds),
-          resourceNotes: data.videoContent.resourceNotes || undefined,
-        });
-      }
-
-      if (data.lessonForm.type === "WRITING") {
-        await adminApi.upsertLessonWrite(lessonId, {
-          title: data.writingContent.title || data.lessonForm.title,
-          prompt: data.writingContent.prompt,
-          gradingCriteria: data.writingContent.gradingCriteria || undefined,
-          wordCountGuidance: parseNumber(data.writingContent.wordCountGuidance),
-          aiPromptId: data.writingContent.aiPromptId || undefined,
-          maxAiRevisions: parseNumber(data.writingContent.maxAiRevisions),
-          dueDate: data.writingContent.dueDate || undefined,
-          submissionMode: data.writingContent.submissionMode,
-        });
-      }
-
-      if (data.lessonForm.type === "QUIZ") {
-        await adminApi.upsertLessonQuiz(lessonId, {
-          title: data.quizTitle || data.lessonForm.title,
-          passingPercentage: parseNumber(data.quizPassingPercentage) ?? null,
-          questions: data.quizQuestions.map((item) => ({
-            question: item.question,
-            options: item.options,
-            correctOption: item.correctOption,
-            explanation: item.explanation,
-          })),
-        });
-      }
-
-      toast.success(
-        editingLesson ? "Đã cập nhật bài học" : "Đã tạo bài học"
-      );
-      closeLessonDialog();
-      await refetch();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Không thể lưu bài học"
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Handle reorder lessons
-  const handleReorderLessons = async (moduleId: string, lessons: WorkspaceLesson[]) => {
-    try {
-      await adminApi.reorderLessons(
-        moduleId,
-        lessons.map((l, index) => ({ id: l.id, orderIndex: index }))
-      );
-      toast.success("Đã lưu thứ tự bài học");
-      await refetch();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Không thể lưu thứ tự"
-      );
-    }
-  };
-
-  const handleSaveVocabulary = async () => {
-    if (!editingVocabulary?.moduleId) return;
-    if (!vocabularyForm.word.trim() || !vocabularyForm.meaning.trim()) {
-      toast.error("Từ vựng và nghĩa là bắt buộc");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const payload = {
-        moduleId: editingVocabulary.moduleId,
-        word: vocabularyForm.word,
-        meaning: vocabularyForm.meaning,
-        partOfSpeech: vocabularyForm.partOfSpeech,
-        phonetic: vocabularyForm.phonetic || undefined,
-        example: vocabularyForm.example || undefined,
-        notes: vocabularyForm.notes || undefined,
-        orderIndex: parseNumber(vocabularyForm.orderIndex),
-        status: vocabularyForm.status,
-      };
-
-      if (editingVocabulary.item) {
-        await adminApi.updateModuleVocabulary(
-          editingVocabulary.item.id,
-          payload
-        );
-      } else {
-        await adminApi.createModuleVocabulary(payload);
-      }
-
-      toast.success(
-        editingVocabulary.item ? "Đã cập nhật từ vựng" : "Đã thêm từ vựng"
-      );
-      setEditingVocabulary(null);
-      setVocabularyForm(EMPTY_VOCABULARY_FORM);
-      await refetch();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Không thể lưu từ vựng"
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleEditVocabulary = (
-    moduleId: string,
-    item: WorkspaceVocabulary | null
-  ) => {
-    setEditingVocabulary({ moduleId, item });
-    if (item) {
-      setVocabularyForm({
-        word: item.word,
-        meaning: item.meaning,
-        partOfSpeech: item.partOfSpeech,
-        phonetic: item.phonetic ?? "",
-        example: item.example ?? "",
-        notes: item.notes ?? "",
-        orderIndex: String(item.orderIndex ?? ""),
-        status: item.status,
-      });
-    } else {
-      setVocabularyForm(EMPTY_VOCABULARY_FORM);
-    }
+  // Module handlers
+  const handleOpenAddModule = () => {
+    setEditingModule(null);
+    setModuleTitle("");
+    setModuleDescription("");
+    setOpenModuleSheet(true);
   };
 
   const handleEditModule = (module: WorkspaceModule) => {
     setEditingModule(module);
     setModuleTitle(module.title);
     setModuleDescription(module.description ?? "");
+    setOpenModuleSheet(true);
   };
 
-  const handleSaveEditModule = async () => {
-    if (!editingModule) return;
+  const handleSubmitModule = async () => {
     if (!moduleTitle.trim()) {
       toast.error("Vui lòng nhập tên chương học");
       return;
@@ -543,75 +153,123 @@ export default function AdminCourseContentWorkspaceClient({
 
     setSubmitting(true);
     try {
-      await adminApi.updateModule(editingModule.id, {
-        title: moduleTitle,
-        description: moduleDescription || undefined,
-      });
-      toast.success("Đã cập nhật chương học");
+      if (editingModule) {
+        await adminApi.updateModule(editingModule.id, {
+          title: moduleTitle,
+          description: moduleDescription || undefined,
+        });
+        toast.success("Đã cập nhật chương học");
+      } else {
+        await adminApi.createModule({
+          courseId,
+          title: moduleTitle,
+          description: moduleDescription || undefined,
+          status: "DRAFT",
+        });
+        toast.success("Đã tạo chương học");
+      }
+      setOpenModuleSheet(false);
       setEditingModule(null);
       setModuleTitle("");
       setModuleDescription("");
       await refetch();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Không thể cập nhật chương học"
+        err instanceof Error ? err.message : "Không thể lưu chương học"
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleSaveCourseEdit = async () => {
-    if (!courseEditForm.title.trim()) {
-      toast.error("Vui lòng nhập tên khóa học");
-      return;
-    }
-
-    setSubmitting(true);
+  // Course handlers
+  const handlePublishCourse = async () => {
+    setIsPublishing(true);
     try {
-      await adminApi.updateCourse(courseId, {
-        title: courseEditForm.title,
-        description: courseEditForm.shortDescription || undefined,
-        detailedDescription: courseEditForm.description || undefined,
-        thumbnailUrl: courseEditForm.thumbnail || undefined,
-        level: courseEditForm.level || "BEGINNER",
-        language: courseEditForm.language || undefined,
-      });
-      toast.success("Đã cập nhật khóa học");
-      setOpenCourseEditDialog(false);
+      await adminApi.publishCourse(courseId);
+      toast.success("Đang xuất bản khóa học...");
       await refetch();
+      toast.success("Đã xuất bản toàn bộ khóa học");
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Không thể cập nhật khóa học"
+        err instanceof Error ? err.message : "Không thể xuất bản khóa học"
       );
     } finally {
-      setSubmitting(false);
+      setIsPublishing(false);
     }
   };
 
-  // Render helpers
+  const handleUnpublishCourse = async () => {
+    setIsPublishing(true);
+    try {
+      await adminApi.unpublishCourse(courseId);
+      toast.success("Đang hủy xuất bản khóa học...");
+      await refetch();
+      toast.success("Đã hủy xuất bản khóa học");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Không thể hủy xuất bản khóa học"
+      );
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  // Reorder lessons
+  const handleReorderLessons = async (
+    moduleId: string,
+    lessons: WorkspaceLesson[]
+  ) => {
+    setReorderingModules((prev) => ({ ...prev, [moduleId]: true }));
+    try {
+      await adminApi.reorderLessons(
+        moduleId,
+        lessons.map((l, index) => ({ id: l.id, orderIndex: index }))
+      );
+      toast.success("Đang lưu thứ tự bài học...");
+      await refetch();
+      toast.success("Đã lưu thứ tự bài học");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Không thể lưu thứ tự"
+      );
+    } finally {
+      setReorderingModules((prev) => ({ ...prev, [moduleId]: false }));
+    }
+  };
+
+  // Delete handler
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    try {
+      if (deleteConfirm.type === "lesson") {
+        await adminApi.deleteLesson(deleteConfirm.id);
+        toast.success("Đã xóa bài học");
+      } else if (deleteConfirm.type === "module") {
+        await adminApi.deleteModule(deleteConfirm.id);
+        toast.success("Đã xóa chương học");
+      }
+      setDeleteConfirm(null);
+      await refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Không thể xóa");
+    }
+  };
+
+  // Render lesson as card
   const renderLesson = (
     lesson: WorkspaceLesson,
-    moduleIndex: number,
+    _moduleIndex: number,
     lessonIndex: number
   ) => (
-    <LessonCardWrapper
+    <LessonCard
       key={lesson.id}
       lesson={lesson}
       lessonIndex={lessonIndex}
-      onEdit={openEditLessonDialog}
-      onDelete={() => setDeleteConfirm({ type: "lesson", id: lesson.id, name: lesson.title })}
-    />
-  );
-
-  const renderVocabulary = (item: WorkspaceVocabulary, moduleId: string) => (
-    <VocabularyCardWrapper
-      key={item.id}
-      item={item}
-      onEdit={() =>
-        handleEditVocabulary(moduleId, item)
+      onClick={() => navigateToLesson(lesson)}
+      onDelete={() =>
+        setDeleteConfirm({ type: "lesson", id: lesson.id, name: lesson.title })
       }
-      onDelete={() => setDeleteConfirm({ type: "vocabulary", id: item.id, name: item.word })}
     />
   );
 
@@ -622,34 +280,21 @@ export default function AdminCourseContentWorkspaceClient({
         courseId={courseId}
         courseTitle={course?.title}
         courseStatus={course?.status}
-        onEditCourse={() => {
-          if (course) {
-            setCourseEditForm({
-              title: course.title ?? "",
-              description: (course as unknown as Record<string, unknown>).description as string ?? "",
-              shortDescription: (course as unknown as Record<string, unknown>).shortDescription as string ?? "",
-              thumbnail: (course as unknown as Record<string, unknown>).thumbnail as string ?? "",
-              level: (course as unknown as Record<string, unknown>).level as string ?? "BEGINNER",
-              language: (course as unknown as Record<string, unknown>).language as string ?? "English",
-            });
-            setOpenCourseEditDialog(true);
-          }
-        }}
+        onEditCourse={() => router.push(`/admin/courses/${courseId}` as `string` as Parameters<typeof router.push>[0])}
         onPublish={handlePublishCourse}
         onUnpublish={handleUnpublishCourse}
-        onAddModule={() => setOpenModuleDialog(true)}
+        onAddModule={handleOpenAddModule}
+        isPublishing={isPublishing}
       />
 
       {/* Error State */}
       {error ? (
         <Card className="border-red-200">
-          <CardContent className="p-6 text-sm text-red-600">
-            {error}
-          </CardContent>
+          <CardContent className="p-6 text-sm text-red-600">{error}</CardContent>
         </Card>
       ) : null}
 
-      {/* Loading State */}
+      {/* Content */}
       {isLoading ? (
         <LoadingSkeleton />
       ) : (
@@ -657,157 +302,171 @@ export default function AdminCourseContentWorkspaceClient({
           {modules.map((moduleItem, moduleIndex) => (
             <ModuleAccordion
               key={moduleItem.id}
-              module={moduleItem as WorkspaceModule}
+              module={moduleItem}
               moduleIndex={moduleIndex}
               onCreateLesson={openCreateLessonDialog}
-              onAddVocabulary={(moduleId) =>
-                handleEditVocabulary(moduleId, null)
-              }
-              onEditVocabulary={handleEditVocabulary}
-              onDeleteVocabulary={() => {}}
               onEditModule={handleEditModule}
               onDeleteModule={(moduleId) => {
-                const mod = moduleItem;
-                setDeleteConfirm({ type: "module", id: moduleId, name: mod.title });
+                setDeleteConfirm({
+                  type: "module",
+                  id: moduleId,
+                  name: moduleItem.title,
+                });
               }}
-              onEditLesson={openEditLessonDialog}
+              onEditLesson={(lesson) => navigateToLesson(lesson)}
               onDeleteLesson={() => {}}
               onReorderLessons={handleReorderLessons}
+              onNavigateToLesson={navigateToLesson}
               renderLesson={renderLesson}
-              renderVocabulary={renderVocabulary}
+              isReordering={reorderingModules[moduleItem.id] ?? false}
             />
           ))}
         </div>
       )}
 
-      {/* Module Form Dialog */}
-      <ModuleFormDialog
-        open={openModuleDialog}
-        onOpenChange={setOpenModuleDialog}
-        onSubmit={handleCreateModule}
+      {/* Empty State */}
+      {!isLoading && modules.length === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="flex size-16 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="size-8"
+              >
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-slate-700 mb-2">
+              Chưa có chương học nào
+            </h3>
+            <p className="text-sm text-slate-500 mb-6 max-w-sm">
+              Bắt đầu xây dựng nội dung khóa học bằng cách thêm chương học đầu tiên
+            </p>
+            <Button onClick={handleOpenAddModule} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="size-4"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Thêm chương học
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Module Sheet */}
+      <ModuleSheet
+        open={openModuleSheet}
+        onOpenChange={setOpenModuleSheet}
+        onSubmit={handleSubmitModule}
         title={moduleTitle}
         onTitleChange={setModuleTitle}
         description={moduleDescription}
         onDescriptionChange={setModuleDescription}
         submitting={submitting}
-      />
-
-      {/* Lesson Form Dialog */}
-      <LessonFormDialog
-        open={openLessonDialog}
-        onOpenChange={(open) => {
-          if (!open) closeLessonDialog();
-        }}
-        onSubmit={handleSaveLessonFromDialog}
-        submitting={submitting}
-        isEditing={Boolean(editingLesson)}
-        moduleTitle={modules.find((m) => m.id === creatingLessonForModuleId)?.title}
-        aiPrompts={aiPrompts}
-      />
-
-      {/* Vocabulary Dialog */}
-      <VocabularyFormDialog
-        open={Boolean(editingVocabulary)}
-        onOpenChange={(open) => !open && setEditingVocabulary(null)}
-        onSubmit={handleSaveVocabulary}
-        form={vocabularyForm}
-        onFormChange={setVocabularyForm}
-        submitting={submitting}
-        isEditing={Boolean(editingVocabulary?.item)}
-      />
-
-      {/* Module Edit Dialog */}
-      <ModuleFormDialog
-        open={Boolean(editingModule)}
-        onOpenChange={(open) => !open && setEditingModule(null)}
-        onSubmit={handleSaveEditModule}
-        title={moduleTitle}
-        onTitleChange={setModuleTitle}
-        description={moduleDescription}
-        onDescriptionChange={setModuleDescription}
-        submitting={submitting}
-        isEditing={true}
+        isEditing={Boolean(editingModule)}
         moduleId={editingModule?.id}
+      />
+
+      {/* Lesson Create Sheet */}
+      <LessonCreateSheet
+        open={openLessonCreateSheet}
+        onOpenChange={setOpenLessonCreateSheet}
+        onSubmit={handleCreateLesson}
+        moduleId={creatingLessonForModuleId ?? ""}
+        submitting={submitting}
       />
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog
         open={Boolean(deleteConfirm)}
         onOpenChange={(open) => !open && setDeleteConfirm(null)}
-        onConfirm={async () => {
-          if (!deleteConfirm) return;
-          try {
-            if (deleteConfirm.type === "lesson") {
-              await adminApi.deleteLesson(deleteConfirm.id);
-              toast.success("Đã xóa bài học");
-            } else if (deleteConfirm.type === "module") {
-              await adminApi.deleteModule(deleteConfirm.id);
-              toast.success("Đã xóa chương học");
-            } else if (deleteConfirm.type === "vocabulary") {
-              await adminApi.deleteModuleVocabulary(deleteConfirm.id);
-              toast.success("Đã xóa từ vựng");
-            }
-            setDeleteConfirm(null);
-            await refetch();
-          } catch (err) {
-            toast.error(
-              err instanceof Error ? err.message : "Không thể xóa"
-            );
-          }
-        }}
+        onConfirm={handleDelete}
         title="Xác nhận xóa"
         description="Hành động này không thể hoàn tác."
         itemName={deleteConfirm?.name}
-      />
-
-      {/* Course Edit Dialog */}
-      <CourseEditDialog
-        open={openCourseEditDialog}
-        onOpenChange={setOpenCourseEditDialog}
-        onSubmit={handleSaveCourseEdit}
-        form={courseEditForm}
-        onFormChange={setCourseEditForm}
-        submitting={submitting}
-        courseTitle={course?.title}
       />
     </div>
   );
 }
 
-// Wrapper Components
-function LessonCardWrapper({
+// Lesson Card Component
+function LessonCard({
   lesson,
   lessonIndex,
-  onEdit,
+  onClick,
   onDelete,
 }: {
   lesson: WorkspaceLesson;
   lessonIndex: number;
-  onEdit: (lesson: WorkspaceLesson) => void;
+  onClick: () => void;
   onDelete: (lessonId: string) => void;
 }) {
-  const type = lesson.video
-    ? "VIDEO"
-    : lesson.quiz
-    ? "QUIZ"
-    : lesson.write
-    ? "WRITING"
-    : (lesson as Record<string, unknown>).vocabulary
+  // Determine lesson type by flags first, then by content existence
+  const type = lesson.hasVocabulary
     ? "VOCABULARY"
+    : lesson.hasVideo
+    ? "VIDEO"
+    : lesson.hasQuiz || lesson.quiz
+    ? "QUIZ"
+    : lesson.hasWrite || lesson.write
+    ? "WRITING"
     : "TEXT";
 
-  const typeConfig: Record<string, { color: string; label: string }> = {
-    TEXT: { color: "bg-blue-100 text-blue-700", label: "Text" },
-    VIDEO: { color: "bg-purple-100 text-purple-700", label: "Video" },
-    QUIZ: { color: "bg-amber-100 text-amber-700", label: "Quiz" },
-    WRITING: { color: "bg-emerald-100 text-emerald-700", label: "Writing" },
-    VOCABULARY: { color: "bg-teal-100 text-teal-700", label: "Vocabulary" },
+  const typeConfig: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
+    TEXT: {
+      color: "bg-blue-100 text-blue-700",
+      label: "Text",
+      icon: <FileText className="size-3.5" />,
+    },
+    VIDEO: {
+      color: "bg-purple-100 text-purple-700",
+      label: "Video",
+      icon: <Video className="size-3.5" />,
+    },
+    QUIZ: {
+      color: "bg-amber-100 text-amber-700",
+      label: "Quiz",
+      icon: <FileQuestion className="size-3.5" />,
+    },
+    WRITING: {
+      color: "bg-emerald-100 text-emerald-700",
+      label: "Writing",
+      icon: <FilePenLine className="size-3.5" />,
+    },
+    VOCABULARY: {
+      color: "bg-teal-100 text-teal-700",
+      label: "Từ vựng",
+      icon: <BookOpen className="size-3.5" />,
+    },
   };
 
   const config = typeConfig[type];
 
   return (
-    <div className="group relative flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-indigo-200 hover:shadow-sm">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="group relative flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-indigo-200 hover:shadow-sm cursor-pointer"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono text-slate-400">
@@ -816,47 +475,25 @@ function LessonCardWrapper({
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}
           >
+            {config.icon}
             {config.label}
           </span>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => onEdit(lesson)}
-            className="inline-flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 opacity-0 group-hover:opacity-100"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="size-3.5"
-            >
-              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-            </svg>
-          </button>
-          <button
-            onClick={() => onDelete(lesson.id)}
-            className="inline-flex size-7 items-center justify-center rounded-lg text-red-400 transition-colors hover:bg-red-50 hover:text-red-600 opacity-0 group-hover:opacity-100"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="size-3.5"
-            >
-              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
-          </button>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 text-red-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(lesson.id);
+          }}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
       </div>
 
       <div>
-        <h5 className="font-medium text-slate-900 line-clamp-2">
-          {lesson.title}
-        </h5>
+        <h5 className="font-medium text-slate-900 line-clamp-2">{lesson.title}</h5>
         {lesson.description && (
           <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
             {lesson.description}
@@ -883,62 +520,6 @@ function LessonCardWrapper({
             Bắt buộc
           </Badge>
         )}
-      </div>
-    </div>
-  );
-}
-
-function VocabularyCardWrapper({
-  item,
-  onEdit,
-  onDelete,
-}: {
-  item: WorkspaceVocabulary;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  return (
-    <div className="group flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/50 p-3 transition-colors hover:border-slate-300 hover:bg-slate-50">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-slate-900 truncate">
-            {item.word}
-          </span>
-          <span className="text-xs text-slate-400 italic">{item.partOfSpeech}</span>
-        </div>
-        <p className="text-xs text-slate-500 truncate mt-0.5">{item.meaning}</p>
-      </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={onEdit}
-          className="inline-flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="size-3.5"
-          >
-            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-          </svg>
-        </button>
-        <button
-          onClick={onDelete}
-          className="inline-flex size-7 items-center justify-center rounded-lg text-red-400 transition-colors hover:bg-red-50 hover:text-red-600"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="size-3.5"
-          >
-            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
-        </button>
       </div>
     </div>
   );

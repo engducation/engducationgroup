@@ -1,16 +1,28 @@
-"use client";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import AuthLoginPageClient from "./auth-login-client";
 
-import { useState } from "react";
+async function checkAuthAndRedirect() {
+  const session = await auth.api.getSession({ headers: await headers() });
 
-import SignInForm from "@/components/sign-in-form";
-import SignUpForm from "@/components/sign-up-form";
+  // If already logged in, redirect based on role
+  if (session?.user) {
+    const role = (session.user as any).role;
+    if (role === "admin") {
+      redirect("/admin/dashboard");
+    } else {
+      redirect("/account");
+    }
+  }
 
-export default function AuthLoginPage() {
-  const [showSignIn, setShowSignIn] = useState(false);
+  return null;
+}
 
-  return showSignIn ? (
-    <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
-  ) : (
-    <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
-  );
+export default async function AuthLoginPage() {
+  // This will redirect if user is already logged in
+  await checkAuthAndRedirect();
+
+  // If not logged in, render the login page
+  return <AuthLoginPageClient />;
 }

@@ -1,6 +1,23 @@
 import { apiError, apiOk, requireAdminRequest } from "@/features/admin/api/route-helpers";
 import * as adminService from "@/features/admin/services/admin-v2.service";
 
+const VALIDATION_ERROR_KEYWORDS = [
+  "phải có",
+  "không thể",
+  "invalid",
+  "not found",
+  "already",
+  "duplicate",
+  "required",
+  "must have",
+];
+
+function isValidationError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return VALIDATION_ERROR_KEYWORDS.some((keyword) => message.toLowerCase().includes(keyword));
+}
+
 export async function POST(
   _request: Request,
   context: { params: Promise<{ courseId: string }> },
@@ -13,6 +30,7 @@ export async function POST(
     const data = await adminService.publishAdminCourse(courseId);
     return apiOk(data);
   } catch (error) {
-    return apiError(error, "Không thể publish khóa học");
+    const status = isValidationError(error) ? 400 : 500;
+    return apiError(error, "Không thể publish khóa học", status);
   }
 }

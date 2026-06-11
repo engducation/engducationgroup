@@ -3,6 +3,9 @@
  *
  * PRD Section 10.2: Thứ tự Module và Lesson phải liên tục và không trùng lặp.
  * Khi thay đổi thứ tự, hệ thống phải đảm bảo tính nhất quán.
+ *
+ * Lưu ý: Neon HTTP driver không hỗ trợ transactions,
+ * nên cần dùng kỹ thuật "temporary offset" để tránh unique constraint violation.
  */
 
 import { db } from "@/db";
@@ -22,60 +25,63 @@ export async function reorderModulesInDb(
   mode: "insert" | "shift" | "reorder",
   orderedIds?: string[],
 ): Promise<void> {
-  if (mode === "reorder" && orderedIds) {
-    await db.transaction(async (tx) => {
-      for (let i = 0; i < orderedIds.length; i++) {
-        await tx
-          .update(module)
-          .set({ orderIndex: i })
-          .where(and(eq(module.id, orderedIds[i]), eq(module.courseId, courseId)));
-      }
-    });
+  if (mode === "reorder" && orderedIds && orderedIds.length > 0) {
+    // Use temporary offset to avoid unique constraint violation
+    const TEMP_OFFSET = 100000;
+    
+    // Step 1: Set all to temp values (no conflicts)
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db
+        .update(module)
+        .set({ orderIndex: TEMP_OFFSET + i, updatedAt: new Date() })
+        .where(and(eq(module.id, orderedIds[i]), eq(module.courseId, courseId)));
+    }
+    
+    // Step 2: Set to final values
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db
+        .update(module)
+        .set({ orderIndex: i, updatedAt: new Date() })
+        .where(and(eq(module.id, orderedIds[i]), eq(module.courseId, courseId)));
+    }
     return;
   }
 
   if (mode === "shift") {
     // Remove from targetIndex: pull everything below up
-    await db.transaction(async (tx) => {
-      const rows = await tx
-        .select({ id: module.id, orderIndex: module.orderIndex })
-        .from(module)
-        .where(eq(module.courseId, courseId))
-        .orderBy(module.orderIndex);
+    const rows = await db
+      .select({ id: module.id, orderIndex: module.orderIndex })
+      .from(module)
+      .where(eq(module.courseId, courseId))
+      .orderBy(module.orderIndex);
 
-      const removed = rows.find((r) => r.orderIndex === targetIndex);
-      if (!removed) return;
-
-      for (const row of rows) {
-        if (row.orderIndex > targetIndex) {
-          await tx
-            .update(module)
-            .set({ orderIndex: row.orderIndex - 1 })
-            .where(eq(module.id, row.id));
-        }
+    for (const row of rows) {
+      if (row.orderIndex > targetIndex) {
+        await db
+          .update(module)
+          .set({ orderIndex: row.orderIndex - 1, updatedAt: new Date() })
+          .where(eq(module.id, row.id));
       }
-    });
+    }
     return;
   }
 
   if (mode === "insert") {
     // Make space at targetIndex: shift everything ≥ targetIndex down by 1
-    await db.transaction(async (tx) => {
-      const rows = await tx
-        .select({ id: module.id, orderIndex: module.orderIndex })
-        .from(module)
-        .where(eq(module.courseId, courseId))
-        .orderBy(module.orderIndex);
+    const rows = await db
+      .select({ id: module.id, orderIndex: module.orderIndex })
+      .from(module)
+      .where(eq(module.courseId, courseId))
+      .orderBy(module.orderIndex);
 
-      for (const row of rows) {
-        if (row.orderIndex >= targetIndex) {
-          await tx
-            .update(module)
-            .set({ orderIndex: row.orderIndex + 1 })
-            .where(eq(module.id, row.id));
-        }
+    for (const row of rows) {
+      if (row.orderIndex >= targetIndex) {
+        await db
+          .update(module)
+          .set({ orderIndex: row.orderIndex + 1, updatedAt: new Date() })
+          .where(eq(module.id, row.id));
       }
-    });
+    }
   }
 }
 
@@ -89,55 +95,62 @@ export async function reorderLessonsInDb(
   mode: "insert" | "shift" | "reorder",
   orderedIds?: string[],
 ): Promise<void> {
-  if (mode === "reorder" && orderedIds) {
-    await db.transaction(async (tx) => {
-      for (let i = 0; i < orderedIds.length; i++) {
-        await tx
-          .update(lesson)
-          .set({ orderIndex: i })
-          .where(and(eq(lesson.id, orderedIds[i]), eq(lesson.moduleId, moduleId)));
-      }
-    });
+  if (mode === "reorder" && orderedIds && orderedIds.length > 0) {
+    // Use temporary offset to avoid unique constraint violation
+    // The offset (100000) ensures no conflict with existing values
+    const TEMP_OFFSET = 100000;
+    
+    // Step 1: Set all to temp values (no conflicts because each gets unique temp value)
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db
+        .update(lesson)
+        .set({ orderIndex: TEMP_OFFSET + i, updatedAt: new Date() })
+        .where(and(eq(lesson.id, orderedIds[i]), eq(lesson.moduleId, moduleId)));
+    }
+    
+    // Step 2: Set to final values (now all old values are replaced)
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db
+        .update(lesson)
+        .set({ orderIndex: i, updatedAt: new Date() })
+        .where(and(eq(lesson.id, orderedIds[i]), eq(lesson.moduleId, moduleId)));
+    }
     return;
   }
 
   if (mode === "shift") {
-    await db.transaction(async (tx) => {
-      const rows = await tx
-        .select({ id: lesson.id, orderIndex: lesson.orderIndex })
-        .from(lesson)
-        .where(eq(lesson.moduleId, moduleId))
-        .orderBy(lesson.orderIndex);
+    const rows = await db
+      .select({ id: lesson.id, orderIndex: lesson.orderIndex })
+      .from(lesson)
+      .where(eq(lesson.moduleId, moduleId))
+      .orderBy(lesson.orderIndex);
 
-      for (const row of rows) {
-        if (row.orderIndex > targetIndex) {
-          await tx
-            .update(lesson)
-            .set({ orderIndex: row.orderIndex - 1 })
-            .where(eq(lesson.id, row.id));
-        }
+    for (const row of rows) {
+      if (row.orderIndex > targetIndex) {
+        await db
+          .update(lesson)
+          .set({ orderIndex: row.orderIndex - 1, updatedAt: new Date() })
+          .where(eq(lesson.id, row.id));
       }
-    });
+    }
     return;
   }
 
   if (mode === "insert") {
-    await db.transaction(async (tx) => {
-      const rows = await tx
-        .select({ id: lesson.id, orderIndex: lesson.orderIndex })
-        .from(lesson)
-        .where(eq(lesson.moduleId, moduleId))
-        .orderBy(lesson.orderIndex);
+    const rows = await db
+      .select({ id: lesson.id, orderIndex: lesson.orderIndex })
+      .from(lesson)
+      .where(eq(lesson.moduleId, moduleId))
+      .orderBy(lesson.orderIndex);
 
-      for (const row of rows) {
-        if (row.orderIndex >= targetIndex) {
-          await tx
-            .update(lesson)
-            .set({ orderIndex: row.orderIndex + 1 })
-            .where(eq(lesson.id, row.id));
-        }
+    for (const row of rows) {
+      if (row.orderIndex >= targetIndex) {
+        await db
+          .update(lesson)
+          .set({ orderIndex: row.orderIndex + 1, updatedAt: new Date() })
+          .where(eq(lesson.id, row.id));
       }
-    });
+    }
   }
 }
 

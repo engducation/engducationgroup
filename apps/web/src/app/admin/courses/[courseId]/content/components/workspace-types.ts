@@ -11,6 +11,11 @@ export type WorkspaceLesson = {
   status: StatusValue;
   orderIndex: number;
   isRequired: boolean;
+  // Lesson type flags (determines lesson type, prioritized order matters)
+  hasRead?: boolean;
+  hasWrite?: boolean;
+  hasQuiz?: boolean;
+  hasVideo?: boolean;
   hasVocabulary?: boolean;
   read?: {
     title?: string | null;
@@ -42,18 +47,6 @@ export type WorkspaceLesson = {
   } | null;
 };
 
-export type WorkspaceVocabulary = {
-  id: string;
-  word: string;
-  meaning: string;
-  partOfSpeech: string;
-  phonetic?: string | null;
-  example?: string | null;
-  notes?: string | null;
-  orderIndex: number;
-  status: StatusValue;
-};
-
 export type WorkspaceModule = {
   id: string;
   courseId: string;
@@ -62,7 +55,6 @@ export type WorkspaceModule = {
   status: StatusValue;
   orderIndex: number;
   lessons?: WorkspaceLesson[];
-  vocabularies?: WorkspaceVocabulary[];
 };
 
 export type WorkspaceCourse = {
@@ -72,4 +64,4 @@ export type WorkspaceCourse = {
   modules?: WorkspaceModule[];
 };
 
-export type LessonType = "TEXT" | "VIDEO" | "QUIZ" | "WRITING";
+export type LessonType = "TEXT" | "VIDEO" | "QUIZ" | "WRITING" | "VOCABULARY";

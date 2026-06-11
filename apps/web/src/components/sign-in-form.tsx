@@ -12,7 +12,7 @@ import Loader from "./loader";
 
 const ROLE_REDIRECTS = {
   admin: "/admin/dashboard",
-  user: "/dashboard",
+  user: "/account",
 } as const;
 
 interface SessionUser {
@@ -27,19 +27,17 @@ interface SessionUser {
 }
 
 async function resolveRoleAfterSignIn(): Promise<string | null> {
-  const session = await authClient.getSession();
-  const user = session.data?.user as unknown as SessionUser | undefined;
-  return user?.role ?? null;
-}
-
-async function redirectToRoleDashboard(
-  router: ReturnType<typeof useRouter>,
-  role: string | null | undefined,
-) {
-  const destination = role === "admin" ? ROLE_REDIRECTS.admin : ROLE_REDIRECTS.user;
-
-  router.replace(destination);
-  router.refresh();
+  try {
+    // Wait for session to be updated
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const session = await authClient.getSession();
+    const user = session.data?.user as unknown as SessionUser | undefined;
+    console.info("[auth] resolved role:", user?.role, "for:", user?.email);
+    return user?.role ?? null;
+  } catch (error) {
+    console.error("[auth] failed to resolve role:", error);
+    return null;
+  }
 }
 
 export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
@@ -59,14 +57,22 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
         },
         {
           onSuccess: async (ctx) => {
-            const user = ctx.data?.user as (SessionUser & { email: string }) | undefined;
-            const initialRole = user?.role ?? null;
-            console.info("[auth] sign-in success role from callback:", initialRole, user?.email);
+            console.info("[auth] sign-in callback user:", ctx.data?.user);
 
-            const resolvedRole = initialRole ?? (await resolveRoleAfterSignIn());
+            // Wait a bit for session to update, then get role
+            const role = await resolveRoleAfterSignIn();
 
+            // Fallback to role from callback if available
+            const callbackRole = (ctx.data?.user as unknown as SessionUser)?.role;
+            const resolvedRole = role ?? callbackRole ?? "user";
+
+            console.info("[auth] redirecting with role:", resolvedRole);
             toast.success("Đăng nhập thành công");
-            await redirectToRoleDashboard(router, resolvedRole);
+
+            // Redirect based on role
+            const destination = resolvedRole === "admin" ? ROLE_REDIRECTS.admin : ROLE_REDIRECTS.user;
+            router.replace(destination);
+            router.refresh();
           },
           onError: (error) => {
             toast.error(error.error.message || error.error.statusText);

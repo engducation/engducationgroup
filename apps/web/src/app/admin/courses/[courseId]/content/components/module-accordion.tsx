@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ChevronRight, Pencil, Plus, Trash2, BookOpenText, MoreVertical, GripVertical } from "lucide-react";
+import {
+  ChevronRight,
+  Pencil,
+  Plus,
+  Trash2,
+  MoreVertical,
+  GripVertical,
+  BookOpen,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,20 +21,41 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type StatusValue = "DRAFT" | "PUBLISHED" | "PAUSED";
-
 export type WorkspaceLesson = {
   id: string;
   moduleId: string;
   title: string;
   description?: string | null;
-  status: StatusValue;
+  status: "DRAFT" | "PUBLISHED" | "PAUSED";
   orderIndex: number;
   isRequired: boolean;
+  // Lesson type flags
+  hasRead?: boolean;
+  hasWrite?: boolean;
+  hasQuiz?: boolean;
+  hasVideo?: boolean;
   hasVocabulary?: boolean;
-  read?: { title?: string | null; content?: string | null; keywords?: string | null; learningObjectives?: string | null } | null;
-  write?: { prompt?: string | null; gradingCriteria?: string | null; wordCountGuidance?: number | null; aiPromptId?: string | null; maxAiRevisions?: number | null } | null;
-  video?: { title?: string | null; description?: string | null; cloudinaryPublicId?: string | null; cloudinaryUrl?: string | null; durationSeconds?: number | null } | null;
+  // Content
+  read?: {
+    title?: string | null;
+    content?: string | null;
+    keywords?: string | null;
+    learningObjectives?: string | null;
+  } | null;
+  write?: {
+    prompt?: string | null;
+    gradingCriteria?: string | null;
+    wordCountGuidance?: number | null;
+    aiPromptId?: string | null;
+    maxAiRevisions?: number | null;
+  } | null;
+  video?: {
+    title?: string | null;
+    description?: string | null;
+    cloudinaryPublicId?: string | null;
+    cloudinaryUrl?: string | null;
+    durationSeconds?: number | null;
+  } | null;
   quiz?: {
     questions?: Array<{
       question: string;
@@ -37,69 +66,56 @@ export type WorkspaceLesson = {
   } | null;
 };
 
-export type WorkspaceVocabulary = {
-  id: string;
-  word: string;
-  meaning: string;
-  partOfSpeech: string;
-  phonetic?: string | null;
-  example?: string | null;
-  notes?: string | null;
-  orderIndex: number;
-  status: StatusValue;
-};
-
 export type WorkspaceModule = {
   id: string;
   courseId: string;
   title: string;
   description?: string | null;
-  status: StatusValue;
+  status: "DRAFT" | "PUBLISHED" | "PAUSED";
   orderIndex: number;
   lessons?: WorkspaceLesson[];
-  vocabularies?: WorkspaceVocabulary[];
 };
 
 interface ModuleAccordionProps {
   module: WorkspaceModule;
   moduleIndex: number;
   onCreateLesson: (moduleId: string) => void;
-  onAddVocabulary: (moduleId: string) => void;
   onEditModule: (module: WorkspaceModule) => void;
   onDeleteModule: (moduleId: string) => void;
   onEditLesson: (lesson: WorkspaceLesson) => void;
   onDeleteLesson: (lessonId: string) => void;
   onReorderLessons?: (moduleId: string, lessons: WorkspaceLesson[]) => void;
-  onEditVocabulary: (moduleId: string, item: WorkspaceVocabulary | null) => void;
-  onDeleteVocabulary: (vocabularyId: string) => void;
-  renderLesson?: (lesson: WorkspaceLesson, moduleIndex: number, lessonIndex: number) => React.ReactNode;
-  renderVocabulary?: (item: WorkspaceVocabulary, moduleId: string) => React.ReactNode;
+  onNavigateToLesson?: (lesson: WorkspaceLesson) => void;
+  renderLesson?: (
+    lesson: WorkspaceLesson,
+    moduleIndex: number,
+    lessonIndex: number
+  ) => React.ReactNode;
+  isReordering?: boolean;
 }
 
 export function ModuleAccordion({
   module,
   moduleIndex,
   onCreateLesson,
-  onAddVocabulary,
   onEditModule,
   onDeleteModule,
   onEditLesson,
   onDeleteLesson,
   onReorderLessons,
-  onEditVocabulary,
-  onDeleteVocabulary,
+  onNavigateToLesson,
   renderLesson,
-  renderVocabulary,
+  isReordering: isReorderingFromProps = false,
 }: ModuleAccordionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
-  const [localLessons, setLocalLessons] = useState<WorkspaceLesson[]>(module.lessons || []);
+  const [localLessons, setLocalLessons] = useState<WorkspaceLesson[]>(
+    module.lessons || []
+  );
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  // Sync local lessons when module changes
   const lessons = module.lessons || [];
-  const vocabularies = module.vocabularies || [];
   const isPublished = module.status === "PUBLISHED";
 
   // Start reordering mode
@@ -138,17 +154,20 @@ export function ModuleAccordion({
   }, []);
 
   // Handle drop
-  const handleDrop = useCallback((targetIndex: number) => {
-    if (draggedIndex === null || draggedIndex === targetIndex) return;
+  const handleDrop = useCallback(
+    (targetIndex: number) => {
+      if (draggedIndex === null || draggedIndex === targetIndex) return;
 
-    const newLessons = [...localLessons];
-    const [draggedItem] = newLessons.splice(draggedIndex, 1);
-    newLessons.splice(targetIndex, 0, draggedItem);
+      const newLessons = [...localLessons];
+      const [draggedItem] = newLessons.splice(draggedIndex, 1);
+      newLessons.splice(targetIndex, 0, draggedItem);
 
-    setLocalLessons(newLessons);
-    setDraggedIndex(targetIndex);
-    setDragOverIndex(null);
-  }, [draggedIndex, localLessons]);
+      setLocalLessons(newLessons);
+      setDraggedIndex(targetIndex);
+      setDragOverIndex(null);
+    },
+    [draggedIndex, localLessons]
+  );
 
   // Handle drag end
   const handleDragEnd = useCallback(() => {
@@ -213,12 +232,6 @@ export function ModuleAccordion({
                 {lessons.length} bài học
               </Badge>
             )}
-
-            {vocabularies.length > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {vocabularies.length} từ vựng
-              </Badge>
-            )}
           </div>
         </div>
       </div>
@@ -236,15 +249,6 @@ export function ModuleAccordion({
                 <Plus className="size-3.5" />
                 Thêm bài học
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onAddVocabulary(module.id)}
-                className="gap-1.5"
-              >
-                <BookOpenText className="size-3.5" />
-                Thêm từ vựng
-              </Button>
             </div>
 
             <DropdownMenu>
@@ -259,6 +263,7 @@ export function ModuleAccordion({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => onDeleteModule(module.id)}
+                  className="text-red-600"
                 >
                   <Trash2 className="size-4 mr-2" />
                   Xóa chương
@@ -268,34 +273,18 @@ export function ModuleAccordion({
           </div>
 
           <div className="p-5 space-y-6">
-            {vocabularies.length > 0 ? (
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <BookOpenText className="size-4 text-emerald-500" />
-                  Từ vựng ({vocabularies.length})
-                </h4>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {vocabularies.map((item) =>
-                    renderVocabulary ? (
-                      renderVocabulary(item, module.id)
-                    ) : (
-                      <VocabularyItem
-                        key={item.id}
-                        item={item}
-                        onEdit={() => onEditVocabulary(module.id, item)}
-                        onDelete={() => onDeleteVocabulary(item.id)}
-                      />
-                    )
-                  )}
-                </div>
-              </div>
-            ) : null}
-
             {displayLessons.length > 0 ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-4 text-indigo-500">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="size-4 text-indigo-500"
+                    >
                       <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
                     </svg>
                     Bài học ({displayLessons.length})
@@ -317,6 +306,7 @@ export function ModuleAccordion({
                         variant="ghost"
                         size="sm"
                         onClick={cancelReordering}
+                        disabled={isReorderingFromProps}
                         className="text-slate-500"
                       >
                         Hủy
@@ -324,9 +314,20 @@ export function ModuleAccordion({
                       <Button
                         size="sm"
                         onClick={saveReorder}
-                        className="bg-indigo-600 hover:bg-indigo-700"
+                        disabled={isReorderingFromProps}
+                        className="bg-indigo-600 hover:bg-indigo-700 min-w-[100px]"
                       >
-                        Lưu thứ tự
+                        {isReorderingFromProps ? (
+                          <>
+                            <svg className="size-3.5 animate-spin mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Đang lưu...
+                          </>
+                        ) : (
+                          "Lưu thứ tự"
+                        )}
                       </Button>
                     </div>
                   )}
@@ -361,7 +362,11 @@ export function ModuleAccordion({
                           lesson={lesson}
                           moduleIndex={moduleIndex}
                           lessonIndex={lessonIndex}
-                          onEdit={() => onEditLesson(lesson)}
+                          onEdit={
+                            onNavigateToLesson
+                              ? () => onNavigateToLesson(lesson)
+                              : () => onEditLesson(lesson)
+                          }
                           onDelete={() => onDeleteLesson(lesson.id)}
                         />
                       )
@@ -371,10 +376,17 @@ export function ModuleAccordion({
               </div>
             ) : null}
 
-            {lessons.length === 0 && vocabularies.length === 0 ? (
+            {lessons.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="flex size-14 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-6">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="size-6"
+                  >
                     <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
                     <path d="M12 6v7M9 10l3-3 3 3" />
                   </svg>
@@ -383,26 +395,16 @@ export function ModuleAccordion({
                   Chương học trống
                 </p>
                 <p className="text-xs text-slate-400 mb-4">
-                  Thêm bài học hoặc từ vựng để bắt đầu xây dựng nội dung
+                  Thêm bài học để bắt đầu xây dựng nội dung
                 </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onCreateLesson(module.id)}
-                  >
-                    <Plus className="size-3.5 mr-1.5" />
-                    Thêm bài học
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onAddVocabulary(module.id)}
-                  >
-                    <BookOpenText className="size-3.5 mr-1.5" />
-                    Thêm từ vựng
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onCreateLesson(module.id)}
+                >
+                  <Plus className="size-3.5 mr-1.5" />
+                  Thêm bài học
+                </Button>
               </div>
             ) : null}
           </div>
@@ -432,18 +434,29 @@ function DraggableLessonItem({
   onDragEnd: () => void;
 }) {
   const getLessonType = () => {
-    if (lesson.video) return "VIDEO";
-    if (lesson.quiz?.questions?.length) return "QUIZ";
-    if (lesson.write) return "WRITING";
+    if (lesson.hasVocabulary) return "VOCABULARY";
+    if (lesson.hasVideo || lesson.video) return "VIDEO";
+    if (lesson.hasQuiz || lesson.quiz?.questions?.length) return "QUIZ";
+    if (lesson.hasWrite || lesson.write) return "WRITING";
     return "TEXT";
   };
 
   const type = getLessonType();
 
-  const typeConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
+  const typeConfig: Record<
+    string,
+    { icon: React.ReactNode; color: string; label: string }
+  > = {
     TEXT: {
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-3.5">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="size-3.5"
+        >
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
           <path d="M14 2v6h6" />
           <path d="M16 13H8" />
@@ -456,7 +469,14 @@ function DraggableLessonItem({
     },
     VIDEO: {
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-3.5">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="size-3.5"
+        >
           <polygon points="5 3 19 12 5 21 5 3" />
         </svg>
       ),
@@ -465,7 +485,14 @@ function DraggableLessonItem({
     },
     QUIZ: {
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-3.5">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="size-3.5"
+        >
           <circle cx="12" cy="12" r="10" />
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
           <path d="M12 17h.01" />
@@ -476,7 +503,14 @@ function DraggableLessonItem({
     },
     WRITING: {
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-3.5">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="size-3.5"
+        >
           <path d="M12 19l7-7 3 3-7 7-3-3z" />
           <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
           <path d="M2 2l7.586 7.586" />
@@ -485,6 +519,24 @@ function DraggableLessonItem({
       ),
       color: "bg-emerald-100 text-emerald-700",
       label: "Writing",
+    },
+    VOCABULARY: {
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="size-3.5"
+        >
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+          <path d="M8 7h6" />
+          <path d="M8 11h8" />
+        </svg>
+      ),
+      color: "bg-teal-100 text-teal-700",
+      label: "Từ vựng",
     },
   };
 
@@ -517,7 +569,9 @@ function DraggableLessonItem({
             <GripVertical className="size-4" />
           </div>
           <span className="text-xs font-mono text-slate-400">{index + 1}</span>
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}>
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}
+          >
             {config.icon}
             {config.label}
           </span>
@@ -527,16 +581,20 @@ function DraggableLessonItem({
       <div>
         <h5 className="font-medium text-slate-900 line-clamp-2">{lesson.title}</h5>
         {lesson.description && (
-          <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{lesson.description}</p>
+          <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
+            {lesson.description}
+          </p>
         )}
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className={`text-xs px-2 py-0.5 rounded-full border ${
-          lesson.status === "PUBLISHED"
-            ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-            : "bg-slate-50 text-slate-500 border-slate-200"
-        }`}>
+        <span
+          className={`text-xs px-2 py-0.5 rounded-full border ${
+            lesson.status === "PUBLISHED"
+              ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+              : "bg-slate-50 text-slate-500 border-slate-200"
+          }`}
+        >
           {lesson.status === "PUBLISHED" ? "Published" : "Draft"}
         </span>
         {lesson.isRequired && (
@@ -544,36 +602,6 @@ function DraggableLessonItem({
             Bắt buộc
           </span>
         )}
-      </div>
-    </div>
-  );
-}
-
-function VocabularyItem({
-  item,
-  onEdit,
-  onDelete,
-}: {
-  item: WorkspaceVocabulary;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  return (
-    <div className="group flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/50 p-3 transition-colors hover:border-slate-300 hover:bg-slate-50">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-slate-900 truncate">{item.word}</span>
-          <span className="text-xs text-slate-400 italic">{item.partOfSpeech}</span>
-        </div>
-        <p className="text-xs text-slate-500 truncate mt-0.5">{item.meaning}</p>
-      </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button variant="ghost" size="icon" className="size-7" onClick={onEdit}>
-          <Pencil className="size-3.5" />
-        </Button>
-        <Button variant="ghost" size="icon" className="size-7 text-red-500 hover:text-red-600" onClick={onDelete}>
-          <Trash2 className="size-3.5" />
-        </Button>
       </div>
     </div>
   );
@@ -593,19 +621,110 @@ function LessonItem({
   onDelete: () => void;
 }) {
   const getLessonType = () => {
-    if (lesson.video) return "VIDEO";
-    if (lesson.quiz?.questions?.length) return "QUIZ";
-    if (lesson.write) return "WRITING";
+    if (lesson.hasVocabulary) return "VOCABULARY";
+    if (lesson.hasVideo || lesson.video) return "VIDEO";
+    if (lesson.hasQuiz || lesson.quiz?.questions?.length) return "QUIZ";
+    if (lesson.hasWrite || lesson.write) return "WRITING";
     return "TEXT";
   };
 
   const type = getLessonType();
 
-  const typeConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
-    TEXT: { icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>, color: "bg-blue-100 text-blue-700", label: "Text" },
-    VIDEO: { icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-3.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>, color: "bg-purple-100 text-purple-700", label: "Video" },
-    QUIZ: { icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-3.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>, color: "bg-amber-100 text-amber-700", label: "Quiz" },
-    WRITING: { icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-3.5"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>, color: "bg-emerald-100 text-emerald-700", label: "Writing" },
+  const typeConfig: Record<
+    string,
+    { icon: React.ReactNode; color: string; label: string }
+  > = {
+    TEXT: {
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="size-3.5"
+        >
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <path d="M14 2v6h6" />
+          <path d="M16 13H8" />
+          <path d="M16 17H8" />
+          <path d="M10 9H8" />
+        </svg>
+      ),
+      color: "bg-blue-100 text-blue-700",
+      label: "Text",
+    },
+    VIDEO: {
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="size-3.5"
+        >
+          <polygon points="5 3 19 12 5 21 5 3" />
+        </svg>
+      ),
+      color: "bg-purple-100 text-purple-700",
+      label: "Video",
+    },
+    QUIZ: {
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="size-3.5"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+          <path d="M12 17h.01" />
+        </svg>
+      ),
+      color: "bg-amber-100 text-amber-700",
+      label: "Quiz",
+    },
+    WRITING: {
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="size-3.5"
+        >
+          <path d="M12 19l7-7 3 3-7 7-3-3z" />
+          <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+          <path d="M2 2l7.586 7.586" />
+          <circle cx="11" cy="11" r="2" />
+        </svg>
+      ),
+      color: "bg-emerald-100 text-emerald-700",
+      label: "Writing",
+    },
+    VOCABULARY: {
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="size-3.5"
+        >
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+          <path d="M8 7h6" />
+          <path d="M8 11h8" />
+        </svg>
+      ),
+      color: "bg-teal-100 text-teal-700",
+      label: "Từ vựng",
+    },
   };
 
   const config = typeConfig[type];
@@ -617,16 +736,28 @@ function LessonItem({
           <span className="text-xs font-mono text-slate-400">
             {lessonIndex + 1}
           </span>
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}>
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}
+          >
             {config.icon}
             {config.label}
           </span>
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" className="size-7" onClick={onEdit}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={onEdit}
+          >
             <Pencil className="size-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="size-7 text-red-500 hover:text-red-600" onClick={onDelete}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 text-red-500 hover:text-red-600"
+            onClick={onDelete}
+          >
             <Trash2 className="size-3.5" />
           </Button>
         </div>
@@ -635,7 +766,9 @@ function LessonItem({
       <div>
         <h5 className="font-medium text-slate-900 line-clamp-2">{lesson.title}</h5>
         {lesson.description && (
-          <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{lesson.description}</p>
+          <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
+            {lesson.description}
+          </p>
         )}
       </div>
 
@@ -651,7 +784,10 @@ function LessonItem({
           {lesson.status === "PUBLISHED" ? "Published" : "Draft"}
         </Badge>
         {lesson.isRequired && (
-          <Badge variant="outline" className="text-xs text-orange-600 border-orange-200">
+          <Badge
+            variant="outline"
+            className="text-xs text-orange-600 border-orange-200"
+          >
             Bắt buộc
           </Badge>
         )}

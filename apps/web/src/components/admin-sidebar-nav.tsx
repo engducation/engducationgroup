@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
+  Bot,
   LayoutDashboard,
   MessageSquareQuote,
   PencilLine,
@@ -27,6 +28,11 @@ const navItems: Array<{
     label: "Khóa học",
     href: "/admin/courses",
     icon: BookOpen,
+  },
+  {
+    label: "AI Prompts",
+    href: "/admin/ai-prompts",
+    icon: Bot,
   },
   {
     label: "Giao dịch",

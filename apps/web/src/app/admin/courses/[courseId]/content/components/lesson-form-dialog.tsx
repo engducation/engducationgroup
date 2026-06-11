@@ -1,14 +1,27 @@
 "use client";
 
+import { useState } from "react";
+import { FilePenLine, FileQuestion, FileText, Trash2, Video, GripVertical, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FilePenLine, FileQuestion, FileText, Trash2, Video, GripVertical } from "lucide-react";
-import { useState } from "react";
+import { WritingLessonEditor } from "./writing-lesson-editor";
+import { VideoLessonEditor } from "./video-lesson-editor";
+import { VocabularyLessonEditor } from "./vocabulary-lesson-editor";
 
-type LessonType = "TEXT" | "VIDEO" | "QUIZ" | "WRITING";
+type LessonType = "TEXT" | "VIDEO" | "QUIZ" | "WRITING" | "VOCABULARY";
 type StatusValue = "DRAFT" | "PUBLISHED" | "PAUSED";
+
+interface AiPromptOption {
+  id: string;
+  name: string;
+  description?: string | null;
+  systemPrompt: string;
+  userPromptTemplate: string;
+  temperature: number;
+  maxTokens: number;
+}
 
 interface LessonFormState {
   title: string;
@@ -76,6 +89,7 @@ interface LessonFormDialogProps {
   submitting: boolean;
   isEditing: boolean;
   moduleTitle?: string;
+  aiPrompts?: AiPromptOption[];
 }
 
 const EMPTY_LESSON_FORM: LessonFormState = {
@@ -121,6 +135,7 @@ export function LessonFormDialog({
   submitting,
   isEditing,
   moduleTitle,
+  aiPrompts = [],
 }: LessonFormDialogProps) {
   const [lessonForm, setLessonForm] = useState<LessonFormState>(
     initialData?.lessonForm ?? EMPTY_LESSON_FORM
@@ -205,13 +220,28 @@ export function LessonFormDialog({
     setQuizQuestions(quizQuestions.filter((_, i) => i !== index));
   };
 
+  const getHeaderIcon = () => {
+    switch (lessonForm.type) {
+      case "VIDEO":
+        return <Video className="size-5" />;
+      case "QUIZ":
+        return <FileQuestion className="size-5" />;
+      case "WRITING":
+        return <FilePenLine className="size-5" />;
+      case "VOCABULARY":
+        return <BookOpen className="size-5" />;
+      default:
+        return <FileText className="size-5" />;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <div className="flex items-center gap-3 pr-8">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
-              <FileText className="size-5" />
+              {getHeaderIcon()}
             </div>
             <div>
               <DialogTitle className="text-left">
@@ -234,91 +264,94 @@ export function LessonFormDialog({
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Thông tin cơ bản
             </p>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">
+                Tên bài học *
+              </label>
+              <Input
+                placeholder="VD: Bài 1 — Giới thiệu ngữ pháp"
+                value={lessonForm.title}
+                onChange={(e) =>
+                  setLessonForm({ ...lessonForm, title: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">
+                Loại nội dung
+              </label>
+              <select
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                value={lessonForm.type}
+                onChange={(e) =>
+                  setLessonForm({
+                    ...lessonForm,
+                    type: e.target.value as LessonType,
+                  })
+                }
+                disabled={isEditing}
+              >
+                <option value="TEXT">📄 Text lesson</option>
+                <option value="VIDEO">🎬 Video lesson</option>
+                <option value="QUIZ">❓ Quiz</option>
+                <option value="WRITING">✍️ Writing</option>
+                <option value="VOCABULARY">📚 Vocabulary</option>
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-600">
+              Mô tả ngắn
+            </label>
+            <Textarea
+              placeholder="Mô tả ngắn gọn nội dung bài học..."
+              value={lessonForm.description}
+              className="resize-none"
+              onChange={(e) =>
+                setLessonForm({ ...lessonForm, description: e.target.value })
+              }
+            />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {isEditing && (
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-600">
-                  Tên bài học *
-                </label>
-                <Input
-                  placeholder="VD: Bài 1 — Giới thiệu ngữ pháp"
-                  value={lessonForm.title}
-                  onChange={(e) =>
-                    setLessonForm({ ...lessonForm, title: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">
-                  Loại nội dung
+                  Trạng thái
                 </label>
                 <select
                   className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-                  value={lessonForm.type}
+                  value={lessonForm.status}
                   onChange={(e) =>
                     setLessonForm({
                       ...lessonForm,
-                      type: e.target.value as LessonType,
+                      status: e.target.value as StatusValue,
                     })
                   }
-                  disabled={isEditing}
                 >
-                  <option value="TEXT">📄 Text lesson</option>
-                  <option value="VIDEO">🎬 Video lesson</option>
-                  <option value="QUIZ">❓ Quiz</option>
-                  <option value="WRITING">✍️ Writing</option>
+                  <option value="DRAFT">Draft</option>
+                  <option value="PUBLISHED">Published</option>
+                  <option value="PAUSED">Paused</option>
                 </select>
               </div>
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="text-xs font-semibold text-slate-600">
-                  Mô tả ngắn
-                </label>
-                <Textarea
-                  placeholder="Mô tả ngắn gọn nội dung bài học..."
-                  value={lessonForm.description}
-                  className="resize-none"
+            )}
+            <div className="flex items-end pb-0.5">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-slate-300 text-indigo-600"
+                  checked={lessonForm.isRequired}
                   onChange={(e) =>
-                    setLessonForm({ ...lessonForm, description: e.target.value })
+                    setLessonForm({ ...lessonForm, isRequired: e.target.checked })
                   }
                 />
-              </div>
-              {isEditing && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Trạng thái
-                  </label>
-                  <select
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-                    value={lessonForm.status}
-                    onChange={(e) =>
-                      setLessonForm({
-                        ...lessonForm,
-                        status: e.target.value as StatusValue,
-                      })
-                    }
-                  >
-                    <option value="DRAFT">Draft</option>
-                    <option value="PUBLISHED">Published</option>
-                    <option value="PAUSED">Paused</option>
-                  </select>
-                </div>
-              )}
-              <div className="flex items-end pb-0.5">
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="size-4 rounded border-slate-300 text-indigo-600"
-                    checked={lessonForm.isRequired}
-                    onChange={(e) =>
-                      setLessonForm({ ...lessonForm, isRequired: e.target.checked })
-                    }
-                  />
-                  <span className="text-sm font-medium text-slate-700">
-                    Bắt buộc hoàn thành
-                  </span>
-                </label>
-              </div>
+                <span className="text-sm font-medium text-slate-700">
+                  Bắt buộc hoàn thành
+                </span>
+              </label>
             </div>
           </div>
+        </div>
 
           {/* Text Content */}
           {lessonForm.type === "TEXT" && (
@@ -355,7 +388,7 @@ export function LessonFormDialog({
                     }
                   />
                 </div>
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-600">
                       Từ khóa
@@ -388,251 +421,29 @@ export function LessonFormDialog({
             </div>
           )}
 
-          {/* Video Content */}
+          {/* Video Content - Using VideoLessonEditor */}
           {lessonForm.type === "VIDEO" && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
-                  <Video className="size-4" />
-                </div>
-                <p className="text-sm font-semibold text-slate-900">Nội dung Video</p>
-              </div>
-              <div className="space-y-3">
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Tiêu đề video
-                    </label>
-                    <Input
-                      placeholder="VD: Bài giảng — Câu điều kiện"
-                      value={videoContent.title}
-                      onChange={(e) =>
-                        setVideoContent({ ...videoContent, title: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Thời lượng (giây)
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="600"
-                      value={videoContent.durationSeconds}
-                      onChange={(e) =>
-                        setVideoContent({
-                          ...videoContent,
-                          durationSeconds: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Mô tả video
-                  </label>
-                  <Textarea
-                    placeholder="Mô tả nội dung video..."
-                    className="resize-none"
-                    value={videoContent.description}
-                    onChange={(e) =>
-                      setVideoContent({
-                        ...videoContent,
-                        description: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Cloudinary Public ID
-                    </label>
-                    <Input
-                      placeholder="folder/video-name"
-                      value={videoContent.cloudinaryPublicId}
-                      onChange={(e) =>
-                        setVideoContent({
-                          ...videoContent,
-                          cloudinaryPublicId: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Cloudinary URL
-                    </label>
-                    <Input
-                      placeholder="https://res.cloudinary.com/..."
-                      value={videoContent.cloudinaryUrl}
-                      onChange={(e) =>
-                        setVideoContent({
-                          ...videoContent,
-                          cloudinaryUrl: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Tài nguyên / Ghi chú
-                  </label>
-                  <Textarea
-                    placeholder="Link tài liệu, transcript, hoặc ghi chú bổ sung..."
-                    className="resize-none"
-                    value={videoContent.resourceNotes}
-                    onChange={(e) =>
-                      setVideoContent({
-                        ...videoContent,
-                        resourceNotes: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
+            <VideoLessonEditor
+              content={videoContent}
+              onContentChange={setVideoContent}
+            />
           )}
 
-          {/* Writing Content */}
+          {/* Writing Content - Using WritingLessonEditor */}
           {lessonForm.type === "WRITING" && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-                  <FilePenLine className="size-4" />
-                </div>
-                <p className="text-sm font-semibold text-slate-900">Bài tập Writing</p>
-              </div>
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Tiêu đề bài viết
-                  </label>
-                  <Input
-                    placeholder="VD: Writing Task 1"
-                    value={writingContent.title}
-                    onChange={(e) =>
-                      setWritingContent({ ...writingContent, title: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Đề bài / Prompt
-                  </label>
-                  <Textarea
-                    placeholder="Nhập đề bài hoặc prompt cho bài viết..."
-                    className="min-h-28"
-                    value={writingContent.prompt}
-                    onChange={(e) =>
-                      setWritingContent({ ...writingContent, prompt: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Tiêu chí chấm điểm / Hướng dẫn
-                  </label>
-                  <Textarea
-                    placeholder="Mô tả tiêu chí chấm điểm, band descriptor, rubric..."
-                    className="min-h-24"
-                    value={writingContent.gradingCriteria}
-                    onChange={(e) =>
-                      setWritingContent({
-                        ...writingContent,
-                        gradingCriteria: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Số từ yêu cầu
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="150"
-                      value={writingContent.wordCountGuidance}
-                      onChange={(e) =>
-                        setWritingContent({
-                          ...writingContent,
-                          wordCountGuidance: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Hạn nộp
-                    </label>
-                    <Input
-                      type="date"
-                      value={writingContent.dueDate}
-                      onChange={(e) =>
-                        setWritingContent({
-                          ...writingContent,
-                          dueDate: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Max AI revisions
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="5"
-                      value={writingContent.maxAiRevisions}
-                      onChange={(e) =>
-                        setWritingContent({
-                          ...writingContent,
-                          maxAiRevisions: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">
-                      AI Prompt ID
-                    </label>
-                    <Input
-                      placeholder="prompt-uuid-..."
-                      value={writingContent.aiPromptId}
-                      onChange={(e) =>
-                        setWritingContent({
-                          ...writingContent,
-                          aiPromptId: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Chế độ nhận bài
-                    </label>
-                    <select
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-                      value={writingContent.submissionMode}
-                      onChange={(e) =>
-                        setWritingContent({
-                          ...writingContent,
-                          submissionMode: e.target.value as "OPEN" | "CLOSED",
-                        })
-                      }
-                    >
-                      <option value="OPEN">Mở — có thể nộp lại nhiều lần</option>
-                      <option value="CLOSED">Đóng — chỉ nộp một lần</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <WritingLessonEditor
+              content={writingContent}
+              onContentChange={setWritingContent}
+              aiPrompts={aiPrompts}
+            />
+          )}
+
+          {/* Vocabulary Content - Using VocabularyLessonEditor */}
+          {lessonForm.type === "VOCABULARY" && (
+            <VocabularyLessonEditor
+              lessonId={initialData?.lessonForm && 'id' in initialData.lessonForm ? (initialData.lessonForm as { id?: string }).id : undefined}
+              initialVocabulary={[]}
+            />
           )}
 
           {/* Quiz Content */}
@@ -644,7 +455,7 @@ export function LessonFormDialog({
                 </div>
                 <p className="text-sm font-semibold text-slate-900">Câu hỏi Quiz</p>
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-600">
                     Tên quiz
@@ -822,6 +633,7 @@ export function DraggableLessonCard({
     if (lesson.video) return "VIDEO";
     if (lesson.quiz) return "QUIZ";
     if (lesson.write) return "WRITING";
+    if ((lesson as Record<string, unknown>).vocabulary) return "VOCABULARY";
     return "TEXT";
   };
 
@@ -872,6 +684,16 @@ export function DraggableLessonCard({
       ),
       color: "bg-emerald-100 text-emerald-700",
       label: "Writing",
+    },
+    VOCABULARY: {
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-3.5">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </svg>
+      ),
+      color: "bg-teal-100 text-teal-700",
+      label: "Vocabulary",
     },
   };
 

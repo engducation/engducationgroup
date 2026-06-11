@@ -66,6 +66,27 @@ function unwrap<T>(data: { data: T }) {
 }
 
 export const adminApi = {
+  // AI Prompts
+  getAiPrompts: async () => {
+    const response = await adminApiClient.get(ADMIN_API_ENDPOINTS.aiPrompts);
+    return unwrap(response.data);
+  },
+
+  createAiPrompt: async (payload: { name: string; description?: string; systemPrompt: string; userPromptTemplate: string; temperature?: number; maxTokens?: number }) => {
+    const response = await adminApiClient.post(ADMIN_API_ENDPOINTS.aiPrompts, payload);
+    return unwrap(response.data);
+  },
+
+  updateAiPrompt: async (promptId: string, payload: Partial<{ name: string; description?: string; systemPrompt: string; userPromptTemplate: string; temperature?: number; maxTokens?: number }>) => {
+    const response = await adminApiClient.patch(ADMIN_API_ENDPOINTS.aiPromptDetail(promptId), payload);
+    return unwrap(response.data);
+  },
+
+  deleteAiPrompt: async (promptId: string) => {
+    const response = await adminApiClient.delete(ADMIN_API_ENDPOINTS.aiPromptDetail(promptId));
+    return unwrap(response.data);
+  },
+
   getDashboardOverview: async () => {
     const response = await adminApiClient.get(ADMIN_API_ENDPOINTS.dashboardOverview);
     return unwrap(response.data);
@@ -194,6 +215,32 @@ export const adminApi = {
     payload: { title?: string; passingPercentage?: number | null; questions: AdminQuizQuestionPayload[] },
   ) => {
     const response = await adminApiClient.put(ADMIN_API_ENDPOINTS.lessonQuiz(lessonId), payload);
+    return unwrap(response.data);
+  },
+
+  // Lesson Vocabulary
+  getLessonVocabulary: async (lessonId: string) => {
+    const response = await adminApiClient.get(ADMIN_API_ENDPOINTS.lessonVocabulary(lessonId));
+    return unwrap(response.data);
+  },
+
+  addLessonVocabulary: async (lessonId: string, payload: { word: string; meaning: string; partOfSpeech: string; phonetic?: string; example?: string; notes?: string }) => {
+    const response = await adminApiClient.post(ADMIN_API_ENDPOINTS.lessonVocabulary(lessonId), payload);
+    return unwrap(response.data);
+  },
+
+  updateLessonVocabulary: async (vocabularyId: string, payload: Partial<{ word: string; meaning: string; partOfSpeech: string; phonetic: string; example: string; notes: string; status: string }>) => {
+    const response = await adminApiClient.patch(ADMIN_API_ENDPOINTS.lessonVocabularyDetail(vocabularyId), payload);
+    return unwrap(response.data);
+  },
+
+  deleteLessonVocabulary: async (vocabularyId: string) => {
+    const response = await adminApiClient.delete(ADMIN_API_ENDPOINTS.lessonVocabularyDetail(vocabularyId));
+    return unwrap(response.data);
+  },
+
+  syncLessonVocabulary: async (lessonId: string, vocabularyList: Array<{ id?: string; word: string; meaning: string; partOfSpeech: string; phonetic?: string; example?: string; notes?: string }>) => {
+    const response = await adminApiClient.post(`${ADMIN_API_ENDPOINTS.lessonVocabulary(lessonId)}/sync`, { vocabulary: vocabularyList });
     return unwrap(response.data);
   },
 

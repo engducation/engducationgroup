@@ -46,7 +46,7 @@ async function getClientContext() {
 export async function adminGetPromptsAction() {
   await requireAdmin();
   try {
-    const data = await adminService.getPrompts();
+    const data = await adminService.getAiPrompts();
     return { success: true, data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Lỗi không xác định" };
@@ -63,11 +63,11 @@ export async function adminUpsertPromptAction(input: {
 }): Promise<ActionResult> {
   await requireAdmin();
   try {
-    const existing = await adminService.getPrompts();
+    const existing = await adminService.getAiPrompts();
     const isUpdate = existing.some((p) => p.id === input.id);
 
     if (isUpdate) {
-      await adminService.updatePrompt(input.id, {
+      await adminService.updateAiPrompt(input.id, {
         name: input.name,
         systemPrompt: input.systemPrompt,
         userPromptTemplate: input.userPromptTemplate,
@@ -75,7 +75,7 @@ export async function adminUpsertPromptAction(input: {
         maxTokens: input.maxTokens,
       });
     } else {
-      await adminService.createPrompt(input);
+      await adminService.createAiPrompt(input);
     }
 
     revalidatePath("/admin/dashboard");
@@ -88,7 +88,7 @@ export async function adminUpsertPromptAction(input: {
 export async function adminDeletePromptAction(id: string): Promise<ActionResult> {
   await requireAdmin();
   try {
-    await adminService.deletePrompt(id);
+    await adminService.deleteAiPrompt(id);
     revalidatePath("/admin/dashboard");
     return { success: true, data: null };
   } catch (err) {

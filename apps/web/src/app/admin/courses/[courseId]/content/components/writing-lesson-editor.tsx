@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Play, Loader2, Send } from "lucide-react";
+import { Sparkles, Play, Loader2, Send, ChevronDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,16 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+interface AiPromptOption {
+  id: string;
+  name: string;
+  description?: string | null;
+  systemPrompt: string;
+  userPromptTemplate: string;
+  temperature: number;
+  maxTokens: number;
+}
 
 interface WritingContent {
   title: string;
@@ -25,6 +35,7 @@ interface WritingContent {
 interface WritingLessonEditorProps {
   content: WritingContent;
   onContentChange: (content: WritingContent) => void;
+  aiPrompts?: AiPromptOption[];
   onTestPrompt?: (prompt: string, userText: string) => Promise<string>;
   isTestingPrompt?: boolean;
 }
@@ -32,12 +43,16 @@ interface WritingLessonEditorProps {
 export function WritingLessonEditor({
   content,
   onContentChange,
+  aiPrompts = [],
   onTestPrompt,
   isTestingPrompt = false,
 }: WritingLessonEditorProps) {
   const [testInput, setTestInput] = useState("");
   const [testOutput, setTestOutput] = useState("");
   const [testError, setTestError] = useState("");
+  const [showPromptDropdown, setShowPromptDropdown] = useState(false);
+
+  const selectedPrompt = aiPrompts.find((p) => p.id === content.aiPromptId);
 
   const handleTestPrompt = async () => {
     if (!onTestPrompt || !testInput.trim()) return;
@@ -51,6 +66,21 @@ export function WritingLessonEditor({
     } catch (err) {
       setTestError(err instanceof Error ? err.message : "Lỗi khi chạy prompt");
     }
+  };
+
+  const handleSelectPrompt = (prompt: AiPromptOption) => {
+    onContentChange({
+      ...content,
+      aiPromptId: prompt.id,
+    });
+    setShowPromptDropdown(false);
+  };
+
+  const handleClearPrompt = () => {
+    onContentChange({
+      ...content,
+      aiPromptId: "",
+    });
   };
 
   return (
@@ -110,7 +140,7 @@ export function WritingLessonEditor({
 
           {/* Right: Settings */}
           <div className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="word-count" className="text-xs font-semibold text-slate-600">Số từ yêu cầu</Label>
                 <Input
@@ -132,7 +162,7 @@ export function WritingLessonEditor({
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="max-revisions" className="text-xs font-semibold text-slate-600">Max AI revisions</Label>
                 <Input
@@ -158,14 +188,89 @@ export function WritingLessonEditor({
               </div>
             </div>
 
+            {/* AI Prompt Dropdown */}
             <div className="space-y-1.5">
-              <Label htmlFor="ai-prompt-id" className="text-xs font-semibold text-slate-600">AI Prompt ID</Label>
-              <Input
-                id="ai-prompt-id"
-                placeholder="prompt-uuid-... (tùy chọn)"
-                value={content.aiPromptId}
-                onChange={(e) => onContentChange({ ...content, aiPromptId: e.target.value })}
-              />
+              <Label htmlFor="ai-prompt-select" className="text-xs font-semibold text-slate-600">AI Prompt</Label>
+              <div className="relative">
+                <button
+                  type="button"
+                  id="ai-prompt-select"
+                  onClick={() => setShowPromptDropdown(!showPromptDropdown)}
+                  className="flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 text-sm transition-colors hover:bg-slate-50"
+                >
+                  <span className={selectedPrompt ? "text-slate-900" : "text-slate-400"}>
+                    {selectedPrompt ? selectedPrompt.name : "Chọn AI Prompt..."}
+                  </span>
+                  <ChevronDown className={`size-4 text-slate-400 transition-transform ${showPromptDropdown ? "rotate-180" : ""}`} />
+                </button>
+
+                {showPromptDropdown && (
+                  <div className="absolute z-50 mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-lg">
+                    {aiPrompts.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-slate-500">
+                        Chưa có AI Prompt nào.
+                        <br />
+                        <a href="/admin/ai-prompts" target="_blank" className="text-indigo-600 hover:underline">
+                          Tạo mới tại đây
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="max-h-60 overflow-y-auto p-1">
+                        {aiPrompts.map((prompt) => (
+                          <button
+                            key={prompt.id}
+                            type="button"
+                            onClick={() => handleSelectPrompt(prompt)}
+                            className={`flex w-full items-start gap-3 rounded-lg p-3 text-left transition-colors ${
+                              content.aiPromptId === prompt.id
+                                ? "bg-indigo-50 text-indigo-900"
+                                : "hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-slate-900 truncate">
+                                {prompt.name}
+                              </div>
+                              {prompt.description && (
+                                <div className="text-xs text-slate-500 truncate mt-0.5">
+                                  {prompt.description}
+                                </div>
+                              )}
+                            </div>
+                            <Sparkles className="size-4 text-violet-500 shrink-0 mt-0.5" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected prompt info */}
+              {selectedPrompt && (
+                <div className="mt-2 rounded-lg border border-violet-100 bg-violet-50/50 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Sparkles className="size-3.5 text-violet-500" />
+                        <span className="text-xs font-medium text-violet-700">
+                          {selectedPrompt.name}
+                        </span>
+                      </div>
+                      {selectedPrompt.description && (
+                        <p className="text-xs text-slate-600">{selectedPrompt.description}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleClearPrompt}
+                      className="text-xs text-slate-400 hover:text-slate-600"
+                    >
+                      Bỏ chọn
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -214,7 +319,7 @@ export function WritingLessonEditor({
           <TabsContent value="input" className="mt-4">
             <div className="space-y-4">
               <Textarea
-                placeholder="Nhập văn bản lỗi ngẫu nhiên để test prompt AI..."
+                placeholder="Nhập văn bản để test prompt AI..."
                 className="min-h-40 font-mono text-sm"
                 value={testInput}
                 onChange={(e) => setTestInput(e.target.value)}
@@ -262,7 +367,7 @@ export function WritingLessonEditor({
                   </div>
                   <p className="text-sm font-medium text-slate-600 mb-1">Chưa có kết quả</p>
                   <p className="text-xs text-slate-400">
-                    Nhập văn bản test ở tab &ldquo;Nhập văn bản test&rdquo; và nhấn &ldquo;Chạy thử nghiệm&rdquo;
+                    Nhập văn bản test ở tab &quot;Nhập văn bản test&quot; và nhấn &quot;Chạy thử nghiệm&quot;
                   </p>
                 </CardContent>
               </Card>

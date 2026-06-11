@@ -28,11 +28,21 @@ import type {
   LessonType,
 } from "./components";
 
+interface AiPromptOption {
+  id: string;
+  name: string;
+  description?: string | null;
+  systemPrompt: string;
+  userPromptTemplate: string;
+  temperature: number;
+  maxTokens: number;
+}
+
 // Re-export LessonType for backward compatibility
 export type { LessonType } from "./components";
 
 // Type aliases for internal use
-type FormLessonType = "TEXT" | "VIDEO" | "QUIZ" | "WRITING";
+type FormLessonType = "TEXT" | "VIDEO" | "QUIZ" | "WRITING" | "VOCABULARY";
 
 // Form State Constants
 const EMPTY_LESSON_FORM = {
@@ -100,13 +110,16 @@ function normalizeLessonType(lesson: WorkspaceLesson): FormLessonType {
   if (lesson.video) return "VIDEO";
   if (lesson.quiz) return "QUIZ";
   if (lesson.write) return "WRITING";
+  if ((lesson as Record<string, unknown>).vocabulary) return "VOCABULARY";
   return "TEXT";
 }
 
 export default function AdminCourseContentWorkspaceClient({
   courseId,
+  aiPrompts = [],
 }: {
   courseId: string;
+  aiPrompts?: AiPromptOption[];
 }) {
   const { data, isLoading, error, refetch } = useAdminCourseContentWorkspace(courseId);
   const course = data as WorkspaceCourse | null;
@@ -352,6 +365,7 @@ export default function AdminCourseContentWorkspaceClient({
         hasVideo: data.lessonForm.type === "VIDEO",
         hasQuiz: data.lessonForm.type === "QUIZ",
         hasWrite: data.lessonForm.type === "WRITING",
+        hasVocabulary: data.lessonForm.type === "VOCABULARY",
       };
 
       let lessonId: string;
@@ -688,6 +702,7 @@ export default function AdminCourseContentWorkspaceClient({
         submitting={submitting}
         isEditing={Boolean(editingLesson)}
         moduleTitle={modules.find((m) => m.id === creatingLessonForModuleId)?.title}
+        aiPrompts={aiPrompts}
       />
 
       {/* Vocabulary Dialog */}
@@ -777,6 +792,8 @@ function LessonCardWrapper({
     ? "QUIZ"
     : lesson.write
     ? "WRITING"
+    : (lesson as Record<string, unknown>).vocabulary
+    ? "VOCABULARY"
     : "TEXT";
 
   const typeConfig: Record<string, { color: string; label: string }> = {
@@ -784,6 +801,7 @@ function LessonCardWrapper({
     VIDEO: { color: "bg-purple-100 text-purple-700", label: "Video" },
     QUIZ: { color: "bg-amber-100 text-amber-700", label: "Quiz" },
     WRITING: { color: "bg-emerald-100 text-emerald-700", label: "Writing" },
+    VOCABULARY: { color: "bg-teal-100 text-teal-700", label: "Vocabulary" },
   };
 
   const config = typeConfig[type];

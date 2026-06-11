@@ -296,6 +296,38 @@ export const lessonVocabulary = pgTable(
   ],
 );
 
+// ─── Inline Lesson Vocabulary Item (for inline vocabulary in lessons) ─────────────
+
+export const lessonVocabularyItem = pgTable(
+  "lesson_vocabulary_item",
+  {
+    id: text("id").primaryKey(),
+    lessonId: text("lesson_id")
+      .notNull()
+      .references(() => lesson.id, { onDelete: "cascade" }),
+    word: varchar("word", { length: 255 }).notNull(),
+    phonetic: text("phonetic"),
+    partOfSpeech: varchar("part_of_speech", { length: 50 }).notNull(),
+    meaning: text("meaning").notNull(),
+    example: text("example"),
+    notes: text("notes"),
+    orderIndex: integer("order_index").default(0).notNull(),
+    status: varchar("status", { length: 20 })
+      .$type<PublicationStatus>()
+      .default("DRAFT")
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("lesson_vocabulary_item_lesson_idx").on(table.lessonId),
+    index("lesson_vocabulary_item_order_idx").on(table.lessonId, table.orderIndex),
+  ],
+);
+
 // ─── User Vocabulary (Personal Notebook) ───────────────────────────────────
 
 export const userVocabulary = pgTable(

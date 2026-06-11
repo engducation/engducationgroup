@@ -39,6 +39,7 @@ export const PACKAGE_LABELS: Record<PackageType, string> = {
 export const aiPrompt = pgTable("ai_prompt", {
   id: text("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
   systemPrompt: text("system_prompt").notNull(),
   userPromptTemplate: text("user_prompt_template").notNull(),
   temperature: real("temperature").default(0.7).notNull(),

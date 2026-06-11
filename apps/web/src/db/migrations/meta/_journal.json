@@ -22,6 +22,27 @@
       "when": 1780717337226,
       "tag": "0002_silly_may_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781152858694,
+      "tag": "0003_bizarre_william_stryker",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781200000000,
+      "tag": "0004_add_ai_prompt_description",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781155803773,
+      "tag": "0005_gray_otto_octavius",
+      "breakpoints": true
     }
   ]
 }

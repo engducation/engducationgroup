@@ -2,6 +2,8 @@ export const API_PREFIX = "/api/admin";
 
 export const ADMIN_API_ENDPOINTS = {
   dashboardOverview: `${API_PREFIX}/dashboard/overview`,
+  aiPrompts: `${API_PREFIX}/ai-prompts`,
+  aiPromptDetail: (promptId: string) => `${API_PREFIX}/ai-prompts/${promptId}`,
   courses: `${API_PREFIX}/courses`,
   courseDetail: (courseId: string) => `${API_PREFIX}/courses/${courseId}`,
   courseContentWorkspace: (courseId: string) => `${API_PREFIX}/courses/${courseId}/content`,
@@ -18,6 +20,8 @@ export const ADMIN_API_ENDPOINTS = {
   lessonWrite: (lessonId: string) => `${API_PREFIX}/lessons/${lessonId}/write`,
   lessonVideo: (lessonId: string) => `${API_PREFIX}/lessons/${lessonId}/video`,
   lessonQuiz: (lessonId: string) => `${API_PREFIX}/lessons/${lessonId}/quiz`,
+  lessonVocabulary: (lessonId: string) => `${API_PREFIX}/lessons/${lessonId}/vocabulary`,
+  lessonVocabularyDetail: (vocabularyId: string) => `${API_PREFIX}/lesson-vocabulary/${vocabularyId}`,
   orders: `${API_PREFIX}/orders`,
   orderAnalytics: `${API_PREFIX}/orders/analytics`,
   orderApprove: (orderId: string) => `${API_PREFIX}/orders/${orderId}/approve`,

@@ -68,6 +68,12 @@ export {
   upsertLessonWrite,
   upsertLessonVideo,
   upsertLessonQuiz,
+  getLessonContent,
+  getVocabulariesByLesson,
+  createLessonVocabulary,
+  updateLessonVocabularyItem as updateLessonVocabulary,
+  deleteLessonVocabularyItem as deleteLessonVocabulary,
+  syncLessonVocabulary,
   serializeLessonRecord,
 } from "./lesson.service";
 
@@ -106,11 +112,11 @@ export {
 
 // Re-export AI prompt functions
 export {
-  getPrompts,
-  getPromptById,
-  createPrompt,
-  updatePrompt,
-  deletePrompt,
+  getAiPrompts,
+  getAiPromptById,
+  createAiPrompt,
+  updateAiPrompt,
+  deleteAiPrompt,
 } from "./ai-prompt.service";
 
 // Re-export AI quota functions

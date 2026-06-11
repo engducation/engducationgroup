@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { lesson, lessonVideo, quiz, quizQuestion, read, write, module } from "@/db/schema/learning-content";
+import { lesson, lessonVideo, quiz, quizQuestion, read, write, module, lessonVocabulary, lessonVocabularyItem, vocabulary } from "@/db/schema/learning-content";
 import { eq, asc, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { PublicationStatus } from "./course.service";
@@ -256,11 +256,12 @@ export async function getLessonContent(lessonId: string) {
   const lessonData = await db.query.lesson.findFirst({ where: eq(lesson.id, lessonId) });
   if (!lessonData) return null;
 
-  const [readContent, writeContent, videoContent, quizContent] = await Promise.all([
+  const [readContent, writeContent, videoContent, quizContent, vocabList] = await Promise.all([
     db.query.read.findFirst({ where: eq(read.lessonId, lessonId) }),
     db.query.write.findFirst({ where: eq(write.lessonId, lessonId) }),
     db.query.lessonVideo.findFirst({ where: eq(lessonVideo.lessonId, lessonId) }),
     db.query.quiz.findFirst({ where: eq(quiz.lessonId, lessonId) }),
+    getVocabulariesByLesson(lessonId),
   ]);
 
   let questions: typeof quizQuestion.$inferSelect[] = [];
@@ -277,5 +278,118 @@ export async function getLessonContent(lessonId: string) {
     write: writeContent ?? null,
     video: videoContent ?? null,
     quiz: quizContent ? { ...quizContent, questions } : null,
+    vocabulary: vocabList,
   };
+}
+
+// Lesson Vocabulary CRUD
+export interface AdminLessonVocabularyInput {
+  word: string;
+  meaning: string;
+  partOfSpeech: string;
+  phonetic?: string;
+  example?: string;
+  notes?: string;
+}
+
+export async function getVocabulariesByLesson(lessonId: string) {
+  return db.query.lessonVocabularyItem.findMany({
+    where: eq(lessonVocabularyItem.lessonId, lessonId),
+    orderBy: [asc(lessonVocabularyItem.orderIndex)],
+  });
+}
+
+export async function createLessonVocabulary(lessonId: string, input: AdminLessonVocabularyInput) {
+  await ensureLessonExists(lessonId);
+
+  const [existingCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(lessonVocabularyItem)
+    .where(eq(lessonVocabularyItem.lessonId, lessonId));
+
+  const orderIndex = (existingCount?.count ?? 0);
+
+  const id = nanoid();
+  await db.insert(lessonVocabularyItem).values({
+    id,
+    lessonId,
+    word: input.word,
+    meaning: input.meaning,
+    partOfSpeech: input.partOfSpeech,
+    phonetic: input.phonetic ?? null,
+    example: input.example ?? null,
+    notes: input.notes ?? null,
+    orderIndex,
+    status: "DRAFT",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  return db.query.lessonVocabularyItem.findFirst({ where: eq(lessonVocabularyItem.id, id) });
+}
+
+export async function updateLessonVocabularyItem(vocabularyId: string, input: Partial<AdminLessonVocabularyInput & { status?: string }>) {
+  const existing = await db.query.lessonVocabularyItem.findFirst({
+    where: eq(lessonVocabularyItem.id, vocabularyId)
+  });
+  if (!existing) throw new Error("Từ vựng không tồn tại");
+
+  await db.update(lessonVocabularyItem).set({
+    ...(input.word !== undefined ? { word: input.word } : {}),
+    ...(input.meaning !== undefined ? { meaning: input.meaning } : {}),
+    ...(input.partOfSpeech !== undefined ? { partOfSpeech: input.partOfSpeech } : {}),
+    ...(input.phonetic !== undefined ? { phonetic: input.phonetic } : {}),
+    ...(input.example !== undefined ? { example: input.example } : {}),
+    ...(input.notes !== undefined ? { notes: input.notes } : {}),
+    ...(input.status !== undefined ? { status: normalizeStatus(input.status as PublicationStatus) } : {}),
+    updatedAt: new Date(),
+  }).where(eq(lessonVocabularyItem.id, vocabularyId));
+
+  return db.query.lessonVocabularyItem.findFirst({ where: eq(lessonVocabularyItem.id, vocabularyId) });
+}
+
+export async function deleteLessonVocabularyItem(vocabularyId: string) {
+  const existing = await db.query.lessonVocabularyItem.findFirst({
+    where: eq(lessonVocabularyItem.id, vocabularyId)
+  });
+  if (!existing) throw new Error("Từ vựng không tồn tại");
+
+  await db.delete(lessonVocabularyItem).where(eq(lessonVocabularyItem.id, vocabularyId));
+  return { id: vocabularyId };
+}
+
+export async function syncLessonVocabulary(lessonId: string, vocabularyList: Array<{
+  id?: string;
+  word: string;
+  meaning: string;
+  partOfSpeech: string;
+  phonetic?: string;
+  example?: string;
+  notes?: string;
+}>) {
+  await ensureLessonExists(lessonId);
+
+  // Delete all existing vocabularies for this lesson
+  await db.delete(lessonVocabularyItem).where(eq(lessonVocabularyItem.lessonId, lessonId));
+
+  // Insert all new vocabularies
+  for (let i = 0; i < vocabularyList.length; i++) {
+    const vocab = vocabularyList[i];
+    await db.insert(lessonVocabularyItem).values({
+      id: vocab.id || nanoid(),
+      lessonId,
+      word: vocab.word,
+      meaning: vocab.meaning,
+      partOfSpeech: vocab.partOfSpeech,
+      phonetic: vocab.phonetic ?? null,
+      example: vocab.example ?? null,
+      notes: vocab.notes ?? null,
+      orderIndex: i,
+      status: "DRAFT",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+
+  return getVocabulariesByLesson(lessonId);
 }

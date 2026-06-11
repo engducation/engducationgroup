@@ -37,6 +37,11 @@ export interface AdminLessonPayload {
   isRequired?: boolean;
 }
 
+export interface ReorderLessonPayload {
+  id: string;
+  orderIndex: number;
+}
+
 export interface AdminModuleVocabularyPayload {
   moduleId: string;
   word: string;
@@ -133,6 +138,14 @@ export const adminApi = {
 
   deleteLesson: async (lessonId: string) => {
     const response = await adminApiClient.delete(ADMIN_API_ENDPOINTS.lessonDetail(lessonId));
+    return unwrap(response.data);
+  },
+
+  reorderLessons: async (moduleId: string, lessons: { id: string; orderIndex: number }[]) => {
+    const response = await adminApiClient.post(
+      `${ADMIN_API_ENDPOINTS.modules}/${moduleId}/reorder-lessons`,
+      { lessons }
+    );
     return unwrap(response.data);
   },
 

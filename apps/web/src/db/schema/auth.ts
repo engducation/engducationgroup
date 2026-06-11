@@ -1,17 +1,23 @@
 import { relations } from "drizzle-orm";
-import { boolean, index, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").default(false).notNull(),
+  // Mặc định true để đăng nhập ngay sau khi đăng ký API
+  emailVerified: boolean("email_verified").default(true).notNull(),
   image: text("image"),
-  role: text("role"),
-  status: varchar("status", { length: 20 }).default("ACTIVE").notNull(),
+  // Mặc định vai trò là user — admin gán thủ công
+  role: text("role").default("user").notNull(),
+  // Subscription plan: "FREE" | "MONTHLY" | "6_MONTH" | "YEAR"
+  // "FREE" = tài khoản miễn phí, không truy cập được khóa học
+  subscriptionPlan: text("subscription_plan").default("FREE").notNull(),
+  activatedAt: timestamp("activated_at"),
+  expiresAt: timestamp("expires_at"),
+  // Giữ lại các trường cũ để tránh mất dữ liệu khi push
+  status: text("status").default("ACTIVE").notNull(),
   banReason: text("ban_reason"),
-  activatedAt: timestamp("activated_at"), // subscription activated date
-  expiresAt: timestamp("expires_at"), // subscription expiry date, null = no subscription
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

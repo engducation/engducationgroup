@@ -40,14 +40,6 @@ export default function Header() {
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuLink
-                  render={<Link href="/#ai-demo" />}
-                  className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent"
-                >
-                  Trải nghiệm AI
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuLink
                   render={<Link href="/#pricing" />}
                   className="text-sm font-semibold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-transparent p-0 hover:bg-transparent"
                 >

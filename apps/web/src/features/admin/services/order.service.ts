@@ -58,10 +58,11 @@ export async function grantSubscriptionForOrderSuccess(orderId: string, adminId:
     const baseDate = isCurrentlyActive ? currentExpiresAt! : now;
     const newExpiresAt = new Date(baseDate.getTime() + packageDurationMs);
 
-    // Update user subscription dates
+    // Update user subscription dates and plan
     await tx
       .update(user)
       .set({
+        subscriptionPlan: order.packageType,
         activatedAt: newActivatedAt,
         expiresAt: newExpiresAt,
         updatedAt: new Date(),

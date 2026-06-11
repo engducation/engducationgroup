@@ -1,27 +1,19 @@
 "use client";
 
 import {
-  AlertCircle,
   ArrowRight,
   Award,
   BookOpen,
   Check,
   GraduationCap,
-  Lock,
   Play,
   Sparkles,
   Zap
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 
 import Footer from "@/components/footer";
 import Header from "@/components/header";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle
-} from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,64 +24,8 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
 
 export default function Home() {
-  // States for Interactive AI Demo
-  const [inputText, setInputText] = useState("She go to school yesterday and she forget her book...");
-  const [isPending, setIsPending] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [activeTab, setActiveTab] = useState("input");
-  const [requestCount, setRequestCount] = useState(0);
-  const [isRateLimited, setIsRateLimited] = useState(false);
-
-  // Corrected Text and Explanations
-  const correctedText = "She went to school yesterday and she forgot her book.";
-  const corrections = [
-    {
-      original: "go",
-      corrected: "went",
-      reason: "Mệnh đề có trạng từ chỉ thời gian quá khứ 'yesterday', yêu cầu động từ chia ở thì Quá khứ Đơn (Past Simple).",
-    },
-    {
-      original: "forget",
-      corrected: "forgot",
-      reason: "Đảm bảo tính song hành của cấu trúc câu (Parallel Structure) khi hai hành động liên kết bởi liên từ 'and' đều đã xảy ra trong quá khứ.",
-    }
-  ];
-
-  // AI Analysis Handler
-  const handleAIAnalysis = () => {
-    if (requestCount >= 5) {
-      setIsRateLimited(true);
-      toast.error("Hạn mức thử nghiệm tạm thời đã hết! Vui lòng đăng nhập hoặc nâng cấp.", {
-        duration: 5000,
-      });
-      return;
-    }
-
-    setIsPending(true);
-    setIsCompleted(false);
-    setActiveTab("input");
-
-    // Simulate API delay
-    setTimeout(() => {
-      setIsPending(false);
-      setIsCompleted(true);
-      setRequestCount((prev) => prev + 1);
-      setActiveTab("result");
-      toast.success("Phân tích AI hoàn thành thành công!");
-    }, 1500);
-  };
-
   return (
     <>
       <Header />
@@ -113,14 +49,14 @@ export default function Home() {
                 Nền tảng học tập trực tuyến đột phá. Học ngữ pháp qua video chất lượng cao, làm quiz tương tác và nâng tầm bài viết luận ngay lập tức với công nghệ AI sửa lỗi thông minh hoạt động 24/7.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pt-2">
-                <Link href="#ai-demo">
+                <Link href="#features">
                   <Button size="lg" className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 shadow-lg shadow-indigo-600/20 transition-all hover:shadow-xl hover:shadow-indigo-600/30 gap-2">
-                    Thử AI sửa lỗi ngay <Sparkles className="size-4" />
+                    Khám phá ngay <Play className="size-4 fill-current" />
                   </Button>
                 </Link>
-                <Link href="#features">
+                <Link href="#pricing">
                   <Button size="lg" variant="outline" className="w-full sm:w-auto border-muted-foreground/20 hover:bg-muted/40 gap-2">
-                    Xem tính năng chính <Play className="size-4 fill-current" />
+                    Xem bảng giá <ArrowRight className="size-4" />
                   </Button>
                 </Link>
               </div>
@@ -136,23 +72,31 @@ export default function Home() {
                     <span className="w-3 h-3 rounded-full bg-yellow-400" />
                     <span className="w-3 h-3 rounded-full bg-green-400" />
                   </div>
-                  <span className="text-xs text-muted-foreground font-mono">Engducation AI engine v1.0</span>
+                  <span className="text-xs text-muted-foreground font-mono">Engducation v1.0</span>
                 </div>
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1">
-                    <Sparkles className="size-3.5" /> AI Analysis Mode
+                    <BookOpen className="size-3.5" /> Bài học mới
                   </div>
-                  <p className="text-sm font-medium text-primary bg-muted/40 p-3 rounded border border-dashed">
-                    "I <span className="text-red-500 line-through underline decoration-wavy decoration-red-500">has</span> been learning English since 2 years."
-                  </p>
+                  <div className="bg-muted/40 p-3 rounded border border-dashed space-y-2">
+                    <div className="h-3 bg-indigo-200 dark:bg-indigo-900/50 rounded w-3/4" />
+                    <div className="h-2 bg-muted-foreground/20 rounded w-full" />
+                    <div className="h-2 bg-muted-foreground/20 rounded w-5/6" />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
-                    <Check className="size-3.5" /> AI Optimized Output
+                    <Award className="size-3.5" /> Quiz hoàn thành
                   </div>
-                  <p className="text-sm font-medium text-emerald-600 bg-emerald-500/5 dark:bg-emerald-500/10 p-3 rounded border border-emerald-500/20">
-                    "I <span className="font-bold underline">have</span> been learning English <span className="font-bold underline">for</span> 2 years."
-                  </p>
+                  <div className="bg-emerald-500/5 dark:bg-emerald-500/10 p-3 rounded border border-emerald-500/20">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Past Simple Tense</span>
+                      <span className="text-xs font-bold text-emerald-600">9/10</span>
+                    </div>
+                    <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 w-[90%] rounded-full" />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -238,142 +182,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* INTERACTIVE AI DEMO SECTION */}
-        <section id="ai-demo" className="w-full py-16 md:py-24 container mx-auto px-4 md:px-6">
-          <div className="max-w-4xl mx-auto flex flex-col items-center space-y-8">
-            <div className="text-center flex flex-col items-center justify-center space-y-4 mb-4">
-              <Badge variant="outline" className="px-3 py-1 border-indigo-500/30 text-indigo-600 dark:text-indigo-400">
-                Thử Nghiệm Thực Tế
-              </Badge>
-              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-primary">
-                Trải Nghiệm Ngay Trợ Lý AI Writing
-              </h2>
-              <p className="text-muted-foreground text-sm md:text-base max-w-[580px]">
-                Nhập một câu hoặc đoạn văn tiếng Anh có chứa lỗi sai bên dưới, hệ thống sẽ phân tích lỗi sai và tối ưu lại ngữ pháp của bạn trong nháy mắt.
-              </p>
-            </div>
-
-            {/* Simulated Rate Limit Alert */}
-            {isRateLimited && (
-              <Alert variant="destructive" className="w-full border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400 animate-in fade-in slide-in-from-top-4 duration-300">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle className="font-bold">Hạn mức thử nghiệm tạm thời đã hết!</AlertTitle>
-                <AlertDescription className="text-xs md:text-sm mt-1 opacity-90 leading-relaxed">
-                  Để đảm bảo tài nguyên hệ thống, tính năng demo không đăng nhập bị giới hạn tần suất truy cập (tối đa 5 lượt/15 phút). Vui lòng đăng ký tài khoản miễn phí hoặc nâng cấp gói Premium để tiếp tục sử dụng không giới hạn.
-                </AlertDescription>
-                <div className="mt-3 flex gap-2">
-                  <Link href="/login">
-                    <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white font-semibold">Đăng ký miễn phí</Button>
-                  </Link>
-                  <Button size="sm" variant="ghost" onClick={() => setIsRateLimited(false)} className="text-xs">Đóng thông báo</Button>
-                </div>
-              </Alert>
-            )}
-
-            {/* AI Workspace Card */}
-            <div className="w-full border rounded-2xl bg-card shadow-2xl p-6 flex flex-col gap-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-3 bg-muted/40 border-l border-b rounded-bl-lg text-xs font-mono text-muted-foreground flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
-                Công suất sử dụng: {requestCount}/5 lượt thử
-              </div>
-
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 max-w-[340px] mb-4">
-                  <TabsTrigger value="input">Soạn thảo văn bản</TabsTrigger>
-                  <TabsTrigger value="result" disabled={!isCompleted}>Kết quả phân tích</TabsTrigger>
-                </TabsList>
-
-                {/* Input Tab */}
-                <TabsContent value="input" className="space-y-4 mt-0">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Văn bản tiếng Anh đầu vào
-                    </label>
-                    <Textarea 
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      className="min-h-[200px] resize-none border-dashed p-4 font-medium text-base focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-                      placeholder="She go to school yesterday and she forget her book..."
-                      disabled={isPending}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-xs text-muted-foreground">
-                      Độ dài: {inputText.length} ký tự
-                    </span>
-                    <Button 
-                      onClick={handleAIAnalysis}
-                      disabled={isPending || !inputText.trim()}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 shadow-md shadow-indigo-600/10 transition-all hover:shadow-lg hover:shadow-indigo-600/20"
-                    >
-                      {isPending ? (
-                        <span className="flex items-center gap-2">
-                          <span className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Đang phân tích...
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-2">
-                          Phân tích bằng AI <Sparkles className="size-4" />
-                        </span>
-                      )}
-                    </Button>
-                  </div>
-                </TabsContent>
-
-                {/* Result Tab */}
-                <TabsContent value="result" className="space-y-6 mt-0">
-                  {isPending ? (
-                    <div className="space-y-4 py-4">
-                      <Skeleton className="h-5 w-[200px] bg-muted-foreground/10" />
-                      <Skeleton className="h-10 w-full bg-muted-foreground/10" />
-                      <Skeleton className="h-5 w-[250px] bg-muted-foreground/10" />
-                      <Skeleton className="h-24 w-full bg-muted-foreground/10" />
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                      {/* Left: Corrected text display */}
-                      <div className="p-5 rounded-xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 flex flex-col justify-between">
-                        <div className="space-y-3">
-                          <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
-                            <Check className="size-4" /> Bản sửa đổi hoàn hảo
-                          </h4>
-                          <p className="text-base font-semibold leading-relaxed text-primary">
-                            She <span className="bg-emerald-500/20 dark:bg-emerald-500/30 px-1 py-0.5 rounded text-emerald-700 dark:text-emerald-400 underline decoration-2">went</span> to school yesterday and she <span className="bg-emerald-500/20 dark:bg-emerald-500/30 px-1 py-0.5 rounded text-emerald-700 dark:text-emerald-400 underline decoration-2">forgot</span> her book.
-                          </p>
-                        </div>
-                        <div className="pt-4 mt-4 border-t border-emerald-500/10 flex items-center justify-between text-xs text-emerald-600 font-medium">
-                          <span>Độ chính xác: 100% (Từ hệ thống AI)</span>
-                        </div>
-                      </div>
-
-                      {/* Right: Detailed explanations */}
-                      <div className="flex flex-col space-y-4">
-                        <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
-                          <Sparkles className="size-4" /> Báo cáo giải nghĩa chi tiết
-                        </h4>
-                        <div className="space-y-3">
-                          {corrections.map((corr, idx) => (
-                            <div key={idx} className="p-4 rounded-lg bg-muted/40 border text-xs leading-relaxed space-y-1.5">
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-red-500 line-through font-semibold">{corr.original}</span>
-                                <ArrowRight className="size-3 text-muted-foreground" />
-                                <span className="font-mono text-emerald-600 font-extrabold bg-emerald-500/10 px-1 py-0.2 rounded">{corr.corrected}</span>
-                              </div>
-                              <p className="text-muted-foreground font-medium">
-                                {corr.reason}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </div>
-          </div>
-        </section>
-
         {/* PRICING SECTION */}
         <section id="pricing" className="w-full py-16 md:py-24 bg-muted/30 border-y">
           <div className="container mx-auto px-4 md:px-6">
@@ -386,79 +194,108 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
-              {/* Card 1: Free */}
-              <Card className="bg-card border flex flex-col justify-between p-8 hover:shadow-lg transition-all duration-300">
-                <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto items-stretch">
+              {/* Card 1: Gói 1 Tháng */}
+              <Card className="bg-card border flex flex-col justify-between p-6 lg:p-8 hover:shadow-lg transition-all duration-300 relative">
+                <div className="space-y-5">
                   <div className="space-y-2">
-                    <h3 className="text-xl font-bold text-primary">Học Viên Tự Do</h3>
-                    <p className="text-sm text-muted-foreground">Phù hợp để trải nghiệm các tính năng cốt lõi cơ bản.</p>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-primary">0đ</span>
-                    <span className="text-sm text-muted-foreground">/ tháng</span>
+                    <h3 className="text-xl font-bold text-primary">Gói 1 Tháng</h3>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-extrabold text-primary">49.000đ</span>
+                      <span className="text-sm text-muted-foreground">/ tháng</span>
+                    </div>
                   </div>
                   <Separator />
-                  <ul className="space-y-3.5 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4 text-indigo-600" /> Xem các video bài giảng công khai.
+                  <ul className="space-y-3 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2.5">
+                      <Check className="size-4 text-emerald-600 mt-0.5 shrink-0" /> Học từ vựng theo danh mục hệ thống.
                     </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4 text-indigo-600" /> Làm bài tập Quiz cơ bản theo danh mục.
+                    <li className="flex items-start gap-2.5">
+                      <Check className="size-4 text-emerald-600 mt-0.5 shrink-0" /> Làm bài tập Quiz trắc nghiệm cơ bản.
                     </li>
-                    <li className="flex items-center gap-2.5 text-muted-foreground/60">
-                      <Lock className="size-4 text-muted-foreground/40" /> Giới hạn AI Assistant (5 lượt/ngày).
-                    </li>
-                    <li className="flex items-center gap-2.5 text-muted-foreground/60">
-                      <Lock className="size-4 text-muted-foreground/40" /> Không có Dashboard đo tiến trình học sâu.
+                    <li className="flex items-start gap-2.5">
+                      <Check className="size-4 text-emerald-600 mt-0.5 shrink-0" /> Xem video bài giảng (Giới hạn số lượng).
                     </li>
                   </ul>
                 </div>
                 <Link href="/login" className="w-full mt-8">
-                  <Button variant="outline" className="w-full py-6 font-bold border-indigo-600/20 hover:bg-muted/40">
-                    Sử dụng miễn phí
+                  <Button variant="outline" className="w-full py-5 font-bold border-slate-300 hover:bg-slate-50 text-slate-700">
+                    Đăng Ký Ngay
                   </Button>
                 </Link>
               </Card>
 
-              {/* Card 2: Premium Pro */}
-              <Card className="relative bg-card border-2 border-indigo-600 shadow-2xl flex flex-col justify-between p-8 lg:scale-105 z-10 transition-all duration-300">
-                <Badge className="absolute -top-3.5 right-6 bg-indigo-600 hover:bg-indigo-600 text-white font-extrabold px-4 py-1 rounded-full uppercase tracking-wider text-xs border-indigo-700">
-                  Khuyên Dùng
+              {/* Card 2: Gói 6 Tháng - Badge "Phổ biến" */}
+              <Card className="relative bg-card border-2 border-blue-600 shadow-xl flex flex-col justify-between p-6 lg:p-8 z-10 transition-all duration-300">
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-100 hover:bg-blue-100 text-blue-700 font-extrabold px-4 py-1 rounded-full uppercase tracking-wider text-xs border border-blue-200">
+                  Phổ biến
                 </Badge>
-                <div className="space-y-6">
+                <div className="space-y-5">
                   <div className="space-y-2">
-                    <h3 className="text-xl font-bold text-primary flex items-center gap-2">
-                      Premium Pro <Zap className="size-4 fill-amber-400 text-amber-400" />
-                    </h3>
-                    <p className="text-sm text-muted-foreground">Truy cập toàn diện mọi tính năng học tập tối tân nhất.</p>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-primary">199.000đ</span>
-                    <span className="text-sm text-muted-foreground">/ tháng</span>
+                    <h3 className="text-xl font-bold text-primary">Gói 6 Tháng</h3>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-extrabold text-primary">249.000đ</span>
+                      <span className="text-sm text-muted-foreground">/ 6 tháng</span>
+                    </div>
                   </div>
                   <Separator />
-                  <ul className="space-y-3.5 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4 text-indigo-600" /> Xem 100% kho khóa học & video bài giảng chuyên sâu.
+                  <ul className="space-y-3 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2.5">
+                      <Check className="size-4 text-emerald-600 mt-0.5 shrink-0" /> Bao gồm tất cả quyền lợi gói Cơ Bản.
                     </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4 text-indigo-600" /> Luyện tập không giới hạn Quiz trắc nghiệm.
+                    <li className="flex items-start gap-2.5">
+                      <Check className="size-4 text-emerald-600 mt-0.5 shrink-0" /> Xem không giới hạn toàn bộ video bài giảng.
                     </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4 text-indigo-600" /> Không giới hạn ký tự tương tác với AI Assistant.
+                    <li className="flex items-start gap-2.5">
+                      <Check className="size-4 text-emerald-600 mt-0.5 shrink-0" /> Hệ thống Quiz trắc nghiệm nâng cao.
                     </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4 text-indigo-600" /> Dashboard thống kê tiến trình & phát hiện điểm yếu.
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4 text-indigo-600" /> Tự động mở khóa ngay sau khi thanh toán thành công.
+                    <li className="flex items-start gap-2.5">
+                      <Check className="size-4 text-emerald-600 mt-0.5 shrink-0" /> Sử dụng AI Writing Assistant (Giới hạn lượt dùng/tháng).
                     </li>
                   </ul>
                 </div>
                 <Link href="/login" className="w-full mt-8">
-                  <Button variant="default" className="w-full py-6 font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-600/20">
-                    Nâng cấp Premium ngay
+                  <Button variant="default" className="w-full py-5 font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20">
+                    Nâng Cấp Ngay
+                  </Button>
+                </Link>
+              </Card>
+
+              {/* Card 3: Gói 1 Năm - Badge "Tiết Kiệm Nhất" */}
+              <Card className="relative bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 flex flex-col justify-between p-6 lg:p-8 hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+                <div className="relative">
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-500 text-slate-900 font-extrabold px-4 py-1 rounded-full uppercase tracking-wider text-xs border border-amber-300 shadow-lg shadow-amber-500/20">
+                    Tiết Kiệm Nhất
+                  </Badge>
+                </div>
+                <div className="relative space-y-5 pt-4">
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold text-white">Gói 1 Năm</h3>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-extrabold text-white">499.000đ</span>
+                      <span className="text-sm text-slate-400">/ năm</span>
+                    </div>
+                  </div>
+                  <Separator className="border-slate-700" />
+                  <ul className="space-y-3 text-sm text-slate-300">
+                    <li className="flex items-start gap-2.5">
+                      <Check className="size-4 text-emerald-400 mt-0.5 shrink-0" /> Bao gồm tất cả quyền lợi gói 6 Tháng.
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <Check className="size-4 text-emerald-400 mt-0.5 shrink-0" /> Sử dụng AI Writing Assistant (Không giới hạn request).
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <Check className="size-4 text-emerald-400 mt-0.5 shrink-0" /> Nhận báo cáo phân tích lộ trình học tập chuyên sâu từ AI.
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <Check className="size-4 text-emerald-400 mt-0.5 shrink-0" /> Hỗ trợ ưu tiên từ đội ngũ giáo vụ (24/7).
+                    </li>
+                  </ul>
+                </div>
+                <Link href="/login" className="w-full mt-8 relative">
+                  <Button className="w-full py-5 font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-xl shadow-indigo-500/30 transition-all">
+                    Mua Ngay
                   </Button>
                 </Link>
               </Card>

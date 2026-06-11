@@ -46,20 +46,35 @@ export default async function StudentDashboardPage() {
 
   // Check subscription status
   const [currentUser] = await db
-    .select({ expiresAt: user.expiresAt, activatedAt: user.activatedAt })
+    .select({
+      expiresAt: user.expiresAt,
+      activatedAt: user.activatedAt,
+      subscriptionPlan: user.subscriptionPlan,
+    })
     .from(user)
     .where(eq(user.id, session.user.id));
 
   const now = new Date();
-  const isSubscriptionActive = currentUser?.expiresAt && new Date(currentUser.expiresAt) > now;
+  const hasPremium =
+    currentUser?.subscriptionPlan && currentUser.subscriptionPlan !== "FREE";
+  const isExpired = currentUser?.expiresAt
+    ? new Date(currentUser.expiresAt) < now
+    : true;
+  const isSubscriptionActive = hasPremium && !isExpired;
   const expiresAt = currentUser?.expiresAt ? new Date(currentUser.expiresAt) : null;
 
   // Days remaining
   let daysRemaining = 0;
-  if (expiresAt) {
+  if (expiresAt && isSubscriptionActive) {
     const diffMs = expiresAt.getTime() - now.getTime();
     daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }
+
+  const planLabels: Record<string, string> = {
+    MONTHLY: "Monthly",
+    "6_MONTH": "6 Tháng",
+    YEAR: "Năm",
+  };
 
   // Fetch all published courses (accessible with active subscription)
   const publishedCourses = await db
@@ -135,9 +150,9 @@ export default async function StudentDashboardPage() {
             <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-sm px-3 py-1 text-xs font-semibold text-white/80">
               <Flame className="size-3 text-amber-300" />
               {isSubscriptionActive ? (
-                <span>{daysRemaining} ngày còn lại</span>
+                <span>{planLabels[currentUser?.subscriptionPlan ?? ""] ?? currentUser?.subscriptionPlan} · {daysRemaining} ngày còn lại</span>
               ) : (
-                <span>Hết hạn gói hội viên</span>
+                <span>Tài khoản Free</span>
               )}
             </div>
             <h1 className="text-2xl font-bold text-white">
@@ -292,13 +307,13 @@ export default async function StudentDashboardPage() {
             </div>
             {isSubscriptionActive ? (
               <span className="rounded-lg bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                Gói đang hoạt động · {daysRemaining} ngày còn lại
+                Premium {planLabels[currentUser?.subscriptionPlan ?? ""] ?? currentUser?.subscriptionPlan} · {daysRemaining} ngày còn lại
               </span>
             ) : (
               <span
-                className="rounded-lg bg-red-50 px-3 py-1 text-xs font-semibold text-red-700"
+                className="rounded-lg bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700"
               >
-                Cần gia hạn gói hội viên
+                Tài khoản Free — Cần mua gói Premium
               </span>
             )}
           </div>

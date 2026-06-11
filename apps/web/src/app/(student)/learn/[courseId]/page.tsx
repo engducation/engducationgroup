@@ -33,14 +33,19 @@ export default async function StudentLearnPage({ params }: PageProps) {
 
   // Verify subscription is active
   const [currentUser] = await db
-    .select({ expiresAt: user.expiresAt })
+    .select({ expiresAt: user.expiresAt, subscriptionPlan: user.subscriptionPlan })
     .from(user)
     .where(eq(user.id, session.user.id));
 
   const now = new Date();
-  const isSubscriptionActive = currentUser?.expiresAt && new Date(currentUser.expiresAt) > now;
-  if (!isSubscriptionActive) {
-    redirect("/dashboard?expired=true");
+  const hasPremium =
+    currentUser?.subscriptionPlan && currentUser.subscriptionPlan !== "FREE";
+  const isExpired = currentUser?.expiresAt
+    ? new Date(currentUser.expiresAt) < now
+    : true;
+
+  if (!hasPremium || isExpired) {
+    redirect("/dashboard?error=PREMIUM_REQUIRED");
   }
 
   // Fetch course (must be published for access)

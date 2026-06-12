@@ -157,8 +157,8 @@ export function VideoLessonConfig({
             {/* Cloudinary URLs */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="video-title" className="text-xs font-semibold text-slate-600">
-                  Tiêu đề video
+                <Label htmlFor="video-title" className="text-xs font-semibold text-slate-700">
+                  Tiêu đề video <span className="text-slate-400 font-normal">(tùy chọn)</span>
                 </Label>
                 <Input
                   id="video-title"
@@ -172,8 +172,8 @@ export function VideoLessonConfig({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="cloudinary-public-id" className="text-xs font-semibold text-slate-600">
-                    Cloudinary Public ID
+                  <Label htmlFor="cloudinary-public-id" className="text-xs font-semibold text-slate-700">
+                    Cloudinary Public ID <span className="text-slate-400 font-normal">(tùy chọn)</span>
                   </Label>
                   <Input
                     id="cloudinary-public-id"
@@ -185,8 +185,8 @@ export function VideoLessonConfig({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="duration" className="text-xs font-semibold text-slate-600">
-                    Thời lượng (giây)
+                  <Label htmlFor="duration" className="text-xs font-semibold text-slate-700">
+                    Thời lượng (giây) <span className="text-slate-400 font-normal">(tùy chọn)</span>
                   </Label>
                   <Input
                     id="duration"
@@ -201,8 +201,8 @@ export function VideoLessonConfig({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="video-url" className="text-xs font-semibold text-slate-600">
-                  Cloudinary URL
+                <Label htmlFor="video-url" className="text-xs font-semibold text-slate-700">
+                  Cloudinary URL <span className="text-slate-400 font-normal">(tùy chọn)</span>
                 </Label>
                 <Input
                   id="video-url"
@@ -215,8 +215,8 @@ export function VideoLessonConfig({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="video-description" className="text-xs font-semibold text-slate-600">
-                  Mô tả video
+                <Label htmlFor="video-description" className="text-xs font-semibold text-slate-700">
+                  Mô tả video <span className="text-slate-400 font-normal">(tùy chọn)</span>
                 </Label>
                 <Textarea
                   id="video-description"

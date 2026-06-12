@@ -175,7 +175,9 @@ export default function AdminCoursesPage() {
             </DialogHeader>
             <div className="grid gap-3 px-1 pb-1">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">Tên khóa học *</label>
+                <label className="text-xs font-semibold text-slate-700">
+                  Tên khóa học <span className="text-red-500">*</span>
+                </label>
                 <Input
                   placeholder="VD: IELTS Writing Masterclass"
                   value={form.title}
@@ -183,7 +185,9 @@ export default function AdminCoursesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">Trình độ *</label>
+                <label className="text-xs font-semibold text-slate-700">
+                  Trình độ <span className="text-red-500">*</span>
+                </label>
                 <Input
                   placeholder="VD: IELTS 5.5–6.5"
                   value={form.level}
@@ -191,7 +195,9 @@ export default function AdminCoursesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">Mô tả</label>
+                <label className="text-xs font-semibold text-slate-700">
+                  Mô tả <span className="text-slate-400 font-normal">(tùy chọn)</span>
+                </label>
                 <Textarea
                   placeholder="Mô tả ngắn gọn về nội dung và mục tiêu khóa học..."
                   value={form.description}

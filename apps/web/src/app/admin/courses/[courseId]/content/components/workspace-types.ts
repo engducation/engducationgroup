@@ -3,6 +3,8 @@
 
 export type StatusValue = "DRAFT" | "PUBLISHED" | "PAUSED";
 
+export const isPublished = (status?: StatusValue) => status === "PUBLISHED";
+
 export type WorkspaceLesson = {
   id: string;
   moduleId: string;

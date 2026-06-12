@@ -99,7 +99,9 @@ export function QuizLessonEditor({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="quiz-title" className="text-xs font-semibold text-slate-600">Tên quiz</Label>
+              <Label htmlFor="quiz-title" className="text-xs font-semibold text-slate-700">
+                Tên quiz <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              </Label>
               <Input
                 id="quiz-title"
                 placeholder="VD: Kiểm tra từ vựng bài 1"
@@ -108,7 +110,9 @@ export function QuizLessonEditor({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="passing-percentage" className="text-xs font-semibold text-slate-600">Tỉ lệ đạt (%)</Label>
+              <Label htmlFor="passing-percentage" className="text-xs font-semibold text-slate-700">
+                Tỉ lệ đạt (%) <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              </Label>
               <Input
                 id="passing-percentage"
                 type="number"
@@ -191,8 +195,8 @@ function QuestionCard({
 
       {/* Question Text */}
       <div className="space-y-1.5">
-        <Label htmlFor={`question-${index}-text`} className="text-xs font-semibold text-slate-600">
-          Nội dung câu hỏi *
+        <Label htmlFor={`question-${index}-text`} className="text-xs font-semibold text-slate-700">
+          Nội dung câu hỏi <span className="text-slate-400 font-normal">(tùy chọn)</span>
         </Label>
         <Textarea
           id={`question-${index}-text`}
@@ -205,8 +209,8 @@ function QuestionCard({
 
       {/* Answer Options - 2x2 Grid */}
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold text-slate-600">
-          Đáp án — Chọn đáp án đúng bằng cách nhấp vào nút tròn
+        <Label className="text-xs font-semibold text-slate-700">
+          Đáp án — Chọn đáp án đúng bằng cách nhấp vào nút tròn <span className="text-slate-400 font-normal">(tùy chọn)</span>
         </Label>
         <div className="grid gap-3 sm:grid-cols-2">
           {question.options.map((option, optionIndex) => (
@@ -272,8 +276,8 @@ function QuestionCard({
 
       {/* Explanation */}
       <div className="space-y-1.5">
-        <Label htmlFor={`question-${index}-explanation`} className="text-xs font-semibold text-slate-600">
-          Giải thích đáp án (tùy chọn)
+        <Label htmlFor={`question-${index}-explanation`} className="text-xs font-semibold text-slate-700">
+          Giải thích đáp án <span className="text-slate-400 font-normal">(tùy chọn)</span>
         </Label>
         <Textarea
           id={`question-${index}-explanation`}

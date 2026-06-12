@@ -106,7 +106,9 @@ export function WritingLessonEditor({
           {/* Left: Basic Info */}
           <div className="space-y-5">
             <div className="space-y-1.5">
-              <Label htmlFor="writing-title" className="text-xs font-semibold text-slate-600">Tiêu đề bài viết *</Label>
+              <Label htmlFor="writing-title" className="text-xs font-semibold text-slate-700">
+                Tiêu đề bài viết <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="writing-title"
                 placeholder="VD: Writing Task 1 — IELTS Academic"
@@ -116,7 +118,9 @@ export function WritingLessonEditor({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="writing-prompt" className="text-xs font-semibold text-slate-600">Đề bài / Prompt</Label>
+              <Label htmlFor="writing-prompt" className="text-xs font-semibold text-slate-700">
+                Đề bài / Prompt <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              </Label>
               <Textarea
                 id="writing-prompt"
                 placeholder="Nhập đề bài hoặc prompt cho bài viết..."
@@ -127,7 +131,9 @@ export function WritingLessonEditor({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="grading-criteria" className="text-xs font-semibold text-slate-600">Tiêu chí chấm điểm</Label>
+              <Label htmlFor="grading-criteria" className="text-xs font-semibold text-slate-700">
+                Tiêu chí chấm điểm <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              </Label>
               <Textarea
                 id="grading-criteria"
                 placeholder="Mô tả tiêu chí chấm điểm, band descriptor, rubric..."
@@ -142,7 +148,9 @@ export function WritingLessonEditor({
           <div className="space-y-5">
             <div className="grid gap-4 grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="word-count" className="text-xs font-semibold text-slate-600">Số từ yêu cầu</Label>
+                <Label htmlFor="word-count" className="text-xs font-semibold text-slate-700">
+                  Số từ yêu cầu <span className="text-slate-400 font-normal">(tùy chọn)</span>
+                </Label>
                 <Input
                   id="word-count"
                   type="number"
@@ -152,7 +160,9 @@ export function WritingLessonEditor({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="due-date" className="text-xs font-semibold text-slate-600">Hạn nộp</Label>
+                <Label htmlFor="due-date" className="text-xs font-semibold text-slate-700">
+                  Hạn nộp <span className="text-slate-400 font-normal">(tùy chọn)</span>
+                </Label>
                 <Input
                   id="due-date"
                   type="date"
@@ -164,7 +174,9 @@ export function WritingLessonEditor({
 
             <div className="grid gap-4 grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="max-revisions" className="text-xs font-semibold text-slate-600">Max AI revisions</Label>
+                <Label htmlFor="max-revisions" className="text-xs font-semibold text-slate-700">
+                  Max AI revisions <span className="text-slate-400 font-normal">(tùy chọn)</span>
+                </Label>
                 <Input
                   id="max-revisions"
                   type="number"
@@ -175,7 +187,9 @@ export function WritingLessonEditor({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="submission-mode" className="text-xs font-semibold text-slate-600">Chế độ nhận bài</Label>
+                <Label htmlFor="submission-mode" className="text-xs font-semibold text-slate-700">
+                  Chế độ nhận bài <span className="text-slate-400 font-normal">(tùy chọn)</span>
+                </Label>
                 <select
                   id="submission-mode"
                   className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
@@ -190,7 +204,9 @@ export function WritingLessonEditor({
 
             {/* AI Prompt Dropdown */}
             <div className="space-y-1.5">
-              <Label htmlFor="ai-prompt-select" className="text-xs font-semibold text-slate-600">AI Prompt</Label>
+              <Label htmlFor="ai-prompt-select" className="text-xs font-semibold text-slate-700">
+                AI Prompt <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              </Label>
               <div className="relative">
                 <button
                   type="button"

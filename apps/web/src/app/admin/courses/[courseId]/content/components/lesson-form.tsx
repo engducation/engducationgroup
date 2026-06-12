@@ -240,7 +240,9 @@ function BasicInfoSection({
       <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Thông tin cơ bản</p>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-600">Tên bài học *</label>
+          <label className="text-xs font-semibold text-slate-700">
+            Tên bài học <span className="text-red-500">*</span>
+          </label>
           <Input
             placeholder="VD: Bài 1 — Giới thiệu ngữ pháp"
             value={form.title}
@@ -248,7 +250,9 @@ function BasicInfoSection({
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-600">Loại nội dung</label>
+          <label className="text-xs font-semibold text-slate-700">
+            Loại nội dung <span className="text-slate-400 font-normal">(tùy chọn)</span>
+          </label>
           <select
             className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
             value={form.type}
@@ -261,7 +265,9 @@ function BasicInfoSection({
           </select>
         </div>
         <div className="space-y-1.5 md:col-span-2">
-          <label className="text-xs font-semibold text-slate-600">Mô tả ngắn</label>
+          <label className="text-xs font-semibold text-slate-700">
+            Mô tả ngắn <span className="text-slate-400 font-normal">(tùy chọn)</span>
+          </label>
           <Textarea
             placeholder="Mô tả ngắn gọn nội dung bài học..."
             value={form.description}
@@ -271,7 +277,9 @@ function BasicInfoSection({
         </div>
         {isEditing && (
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Trạng thái</label>
+            <label className="text-xs font-semibold text-slate-700">
+              Trạng thái <span className="text-slate-400 font-normal">(tùy chọn)</span>
+            </label>
             <select
               className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
               value={form.status}
@@ -286,7 +294,9 @@ function BasicInfoSection({
           </div>
         )}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-600">Thứ tự trong chương</label>
+          <label className="text-xs font-semibold text-slate-700">
+            Thứ tự trong chương <span className="text-slate-400 font-normal">(tùy chọn)</span>
+          </label>
           <Input
             type="number"
             placeholder="1"

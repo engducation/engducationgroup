@@ -81,7 +81,7 @@ export function CourseEditSheet({
         <div className="flex-1 overflow-y-auto space-y-4 py-4">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700">
-              Tên khóa học *
+              Tên khóa học <span className="text-red-500">*</span>
             </label>
             <Input
               placeholder="VD: English for Beginners"
@@ -91,7 +91,7 @@ export function CourseEditSheet({
           </div>
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700">
-              Mô tả ngắn
+              Mô tả ngắn <span className="text-slate-400 font-normal">(tùy chọn)</span>
             </label>
             <Textarea
               placeholder="Mô tả ngắn gọn về khóa học..."
@@ -102,7 +102,7 @@ export function CourseEditSheet({
           </div>
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700">
-              Mô tả chi tiết
+              Mô tả chi tiết <span className="text-slate-400 font-normal">(tùy chọn)</span>
             </label>
             <Textarea
               placeholder="Mô tả chi tiết nội dung khóa học..."
@@ -113,7 +113,9 @@ export function CourseEditSheet({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Level</label>
+              <label className="text-sm font-semibold text-slate-700">
+                Level <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              </label>
               <select
                 className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                 value={form.level}
@@ -126,7 +128,7 @@ export function CourseEditSheet({
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">
-                Ngôn ngữ
+                Ngôn ngữ <span className="text-slate-400 font-normal">(tùy chọn)</span>
               </label>
               <Input
                 placeholder="VD: English"

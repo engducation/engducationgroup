@@ -72,7 +72,7 @@ export function ModuleSheet({
         <div className="flex-1 overflow-y-auto space-y-4 py-4">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700">
-              Tên chương học *
+              Tên chương học <span className="text-red-500">*</span>
             </label>
             <Input
               placeholder="VD: Chương 1 — Ngữ pháp cơ bản"
@@ -81,7 +81,9 @@ export function ModuleSheet({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">Mô tả</label>
+            <label className="text-sm font-semibold text-slate-700">
+              Mô tả <span className="text-slate-400 font-normal">(tùy chọn)</span>
+            </label>
             <Textarea
               placeholder="Mô tả ngắn gọn nội dung chương học..."
               className="resize-none text-sm min-h-24"

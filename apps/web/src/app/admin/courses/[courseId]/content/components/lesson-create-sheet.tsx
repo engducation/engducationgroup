@@ -126,7 +126,7 @@ export function LessonCreateSheet({
           {/* Title Input */}
           <div className="space-y-2">
             <Label htmlFor="lesson-title" className="text-sm font-semibold text-slate-700">
-              Tiêu đề bài học *
+              Tiêu đề bài học <span className="text-red-500">*</span>
             </Label>
             <Input
               id="lesson-title"
@@ -139,7 +139,7 @@ export function LessonCreateSheet({
           {/* Lesson Type Selection */}
           <div className="space-y-3">
             <Label className="text-sm font-semibold text-slate-700">
-              Loại bài học *
+              Loại bài học <span className="text-red-500">*</span>
             </Label>
             <div className="grid gap-3">
               {LESSON_TYPES.map((type) => (

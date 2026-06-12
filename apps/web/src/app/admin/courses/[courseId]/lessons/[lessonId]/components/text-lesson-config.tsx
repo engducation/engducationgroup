@@ -45,8 +45,8 @@ export function TextLessonConfig({
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="text-title" className="text-xs font-semibold text-slate-600">
-                Tiêu đề bài text
+              <Label htmlFor="text-title" className="text-xs font-semibold text-slate-700">
+                Tiêu đề bài text <span className="text-slate-400 font-normal">(tùy chọn)</span>
               </Label>
               <Input
                 id="text-title"
@@ -60,8 +60,8 @@ export function TextLessonConfig({
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="text-content" className="text-xs font-semibold text-slate-600">
-                  Nội dung bài học
+                <Label htmlFor="text-content" className="text-xs font-semibold text-slate-700">
+                  Nội dung bài học <span className="text-slate-400 font-normal">(tùy chọn)</span>
                 </Label>
                 <span className="text-xs text-slate-400">
                   {content.content.length} ký tự
@@ -85,9 +85,8 @@ Bạn có thể sử dụng Markdown để định dạng:
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="keywords" className="text-xs font-semibold text-slate-600">
-                  Từ khóa
-                  <span className="text-slate-400 font-normal ml-1">(tùy chọn)</span>
+                <Label htmlFor="keywords" className="text-xs font-semibold text-slate-700">
+                  Từ khóa <span className="text-slate-400 font-normal">(tùy chọn)</span>
                 </Label>
                 <Input
                   id="keywords"
@@ -100,9 +99,8 @@ Bạn có thể sử dụng Markdown để định dạng:
                 <p className="text-xs text-slate-400">Phân cách bằng dấu phẩy</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="learning-objectives" className="text-xs font-semibold text-slate-600">
-                  Mục tiêu bài học
-                  <span className="text-slate-400 font-normal ml-1">(tùy chọn)</span>
+                <Label htmlFor="learning-objectives" className="text-xs font-semibold text-slate-700">
+                  Mục tiêu bài học <span className="text-slate-400 font-normal">(tùy chọn)</span>
                 </Label>
                 <Input
                   id="learning-objectives"

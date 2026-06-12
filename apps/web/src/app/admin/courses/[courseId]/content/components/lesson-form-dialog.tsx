@@ -266,8 +266,8 @@ export function LessonFormDialog({
             </p>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600">
-                Tên bài học *
+              <label className="text-xs font-semibold text-slate-700">
+                Tên bài học <span className="text-red-500">*</span>
               </label>
               <Input
                 placeholder="VD: Bài 1 — Giới thiệu ngữ pháp"
@@ -278,8 +278,8 @@ export function LessonFormDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600">
-                Loại nội dung
+              <label className="text-xs font-semibold text-slate-700">
+                Loại nội dung <span className="text-slate-400 font-normal">(tùy chọn)</span>
               </label>
               <select
                 className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
@@ -301,8 +301,8 @@ export function LessonFormDialog({
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">
-              Mô tả ngắn
+            <label className="text-xs font-semibold text-slate-700">
+              Mô tả ngắn <span className="text-slate-400 font-normal">(tùy chọn)</span>
             </label>
             <Textarea
               placeholder="Mô tả ngắn gọn nội dung bài học..."
@@ -316,8 +316,8 @@ export function LessonFormDialog({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {isEditing && (
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">
-                  Trạng thái
+                <label className="text-xs font-semibold text-slate-700">
+                  Trạng thái <span className="text-slate-400 font-normal">(tùy chọn)</span>
                 </label>
                 <select
                   className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
@@ -364,8 +364,8 @@ export function LessonFormDialog({
               </div>
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Tiêu đề bài text
+                  <label className="text-xs font-semibold text-slate-700">
+                    Tiêu đề bài text <span className="text-slate-400 font-normal">(tùy chọn)</span>
                   </label>
                   <Input
                     placeholder="VD: Grammar Focus — Câu điều kiện loại 1"
@@ -376,8 +376,8 @@ export function LessonFormDialog({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Nội dung bài học
+                  <label className="text-xs font-semibold text-slate-700">
+                    Nội dung bài học <span className="text-slate-400 font-normal">(tùy chọn)</span>
                   </label>
                   <Textarea
                     placeholder="Nhập nội dung bài học tại đây..."
@@ -390,8 +390,8 @@ export function LessonFormDialog({
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Từ khóa
+                    <label className="text-xs font-semibold text-slate-700">
+                      Từ khóa <span className="text-slate-400 font-normal">(tùy chọn)</span>
                     </label>
                     <Input
                       placeholder="VD: conditionals, if, when"
@@ -402,8 +402,8 @@ export function LessonFormDialog({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Mục tiêu bài học
+                    <label className="text-xs font-semibold text-slate-700">
+                      Mục tiêu bài học <span className="text-slate-400 font-normal">(tùy chọn)</span>
                     </label>
                     <Input
                       placeholder="VD: Hiểu cấu trúc câu điều kiện"
@@ -457,8 +457,8 @@ export function LessonFormDialog({
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Tên quiz
+                  <label className="text-xs font-semibold text-slate-700">
+                    Tên quiz <span className="text-slate-400 font-normal">(tùy chọn)</span>
                   </label>
                   <Input
                     placeholder="VD: Kiểm tra từ vựng bài 1"
@@ -467,8 +467,8 @@ export function LessonFormDialog({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Tỉ lệ đạt (%)
+                  <label className="text-xs font-semibold text-slate-700">
+                    Tỉ lệ đạt (%) <span className="text-slate-400 font-normal">(tùy chọn)</span>
                   </label>
                   <Input
                     type="number"

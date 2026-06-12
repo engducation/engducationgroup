@@ -154,7 +154,9 @@ export function VideoLessonEditor({
           {/* Cloudinary URLs */}
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="video-title" className="text-xs font-semibold text-slate-600">Tiêu đề video</Label>
+              <Label htmlFor="video-title" className="text-xs font-semibold text-slate-700">
+                Tiêu đề video <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              </Label>
               <Input
                 id="video-title"
                 placeholder="VD: Bài giảng — Câu điều kiện loại 1"
@@ -165,7 +167,9 @@ export function VideoLessonEditor({
 
             <div className="grid gap-4 grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="cloudinary-public-id" className="text-xs font-semibold text-slate-600">Cloudinary Public ID</Label>
+                <Label htmlFor="cloudinary-public-id" className="text-xs font-semibold text-slate-700">
+                  Cloudinary Public ID <span className="text-slate-400 font-normal">(tùy chọn)</span>
+                </Label>
                 <Input
                   id="cloudinary-public-id"
                   placeholder="folder/video-name"
@@ -174,7 +178,9 @@ export function VideoLessonEditor({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="duration" className="text-xs font-semibold text-slate-600">Thời lượng (giây)</Label>
+                <Label htmlFor="duration" className="text-xs font-semibold text-slate-700">
+                  Thời lượng (giây) <span className="text-slate-400 font-normal">(tùy chọn)</span>
+                </Label>
                 <Input
                   id="duration"
                   type="number"
@@ -186,7 +192,9 @@ export function VideoLessonEditor({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="video-url" className="text-xs font-semibold text-slate-600">Cloudinary URL</Label>
+              <Label htmlFor="video-url" className="text-xs font-semibold text-slate-700">
+                Cloudinary URL <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              </Label>
               <Input
                 id="video-url"
                 placeholder="https://res.cloudinary.com/..."
@@ -196,7 +204,9 @@ export function VideoLessonEditor({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="video-description" className="text-xs font-semibold text-slate-600">Mô tả video</Label>
+              <Label htmlFor="video-description" className="text-xs font-semibold text-slate-700">
+                Mô tả video <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              </Label>
               <Textarea
                 id="video-description"
                 placeholder="Mô tả nội dung video..."
@@ -207,7 +217,9 @@ export function VideoLessonEditor({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="resource-notes" className="text-xs font-semibold text-slate-600">Tài nguyên / Ghi chú</Label>
+              <Label htmlFor="resource-notes" className="text-xs font-semibold text-slate-700">
+                Tài nguyên / Ghi chú <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              </Label>
               <Textarea
                 id="resource-notes"
                 placeholder="Link tài liệu, transcript, hoặc ghi chú bổ sung..."

@@ -8,7 +8,6 @@ import {
   Trash2,
   MoreVertical,
   GripVertical,
-  BookOpen,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -20,65 +19,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-export type WorkspaceLesson = {
-  id: string;
-  moduleId: string;
-  title: string;
-  description?: string | null;
-  status: "DRAFT" | "PUBLISHED" | "PAUSED";
-  orderIndex: number;
-  isRequired: boolean;
-  // Lesson type flags
-  hasRead?: boolean;
-  hasWrite?: boolean;
-  hasQuiz?: boolean;
-  hasVideo?: boolean;
-  hasVocabulary?: boolean;
-  // Content
-  read?: {
-    title?: string | null;
-    content?: string | null;
-    keywords?: string | null;
-    learningObjectives?: string | null;
-  } | null;
-  write?: {
-    prompt?: string | null;
-    gradingCriteria?: string | null;
-    wordCountGuidance?: number | null;
-    aiPromptId?: string | null;
-    maxAiRevisions?: number | null;
-  } | null;
-  video?: {
-    title?: string | null;
-    description?: string | null;
-    cloudinaryPublicId?: string | null;
-    cloudinaryUrl?: string | null;
-    durationSeconds?: number | null;
-  } | null;
-  quiz?: {
-    questions?: Array<{
-      question: string;
-      options?: string;
-      correctOption?: number;
-      explanation?: string;
-    }>;
-  } | null;
-};
-
-export type WorkspaceModule = {
-  id: string;
-  courseId: string;
-  title: string;
-  description?: string | null;
-  status: "DRAFT" | "PUBLISHED" | "PAUSED";
-  orderIndex: number;
-  lessons?: WorkspaceLesson[];
-};
+import { isPublished, type WorkspaceLesson, type WorkspaceModule } from "./workspace-types";
 
 interface ModuleAccordionProps {
   module: WorkspaceModule;
   moduleIndex: number;
+  courseStatus?: "DRAFT" | "PUBLISHED" | "PAUSED";
   onCreateLesson: (moduleId: string) => void;
   onEditModule: (module: WorkspaceModule) => void;
   onDeleteModule: (moduleId: string) => void;
@@ -97,6 +43,7 @@ interface ModuleAccordionProps {
 export function ModuleAccordion({
   module,
   moduleIndex,
+  courseStatus,
   onCreateLesson,
   onEditModule,
   onDeleteModule,
@@ -116,7 +63,8 @@ export function ModuleAccordion({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const lessons = module.lessons || [];
-  const isPublished = module.status === "PUBLISHED";
+  const isModulePublished = module.status === "PUBLISHED";
+  const isCoursePublished = isPublished(courseStatus);
 
   // Start reordering mode
   const startReordering = useCallback(() => {
@@ -219,12 +167,12 @@ export function ModuleAccordion({
             <Badge
               variant="outline"
               className={
-                isPublished
+                isModulePublished
                   ? "bg-emerald-50 text-emerald-600 border-emerald-200"
                   : "bg-slate-50 text-slate-500 border-slate-200"
               }
             >
-              {isPublished ? "Published" : "Draft"}
+              {isModulePublished ? "Published" : "Draft"}
             </Badge>
 
             {lessons.length > 0 && (
@@ -244,6 +192,8 @@ export function ModuleAccordion({
                 variant="outline"
                 size="sm"
                 onClick={() => onCreateLesson(module.id)}
+                disabled={isCoursePublished}
+                title={isCoursePublished ? "Không thể thêm bài học khi khóa học đã xuất bản" : undefined}
                 className="gap-1.5"
               >
                 <Plus className="size-3.5" />
@@ -395,12 +345,15 @@ export function ModuleAccordion({
                   Chương học trống
                 </p>
                 <p className="text-xs text-slate-400 mb-4">
-                  Thêm bài học để bắt đầu xây dựng nội dung
+                  {isCoursePublished
+                    ? "Không thể thêm bài học khi khóa học đã xuất bản"
+                    : "Thêm bài học để bắt đầu xây dựng nội dung"}
                 </p>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onCreateLesson(module.id)}
+                  disabled={isCoursePublished}
                 >
                   <Plus className="size-3.5 mr-1.5" />
                   Thêm bài học

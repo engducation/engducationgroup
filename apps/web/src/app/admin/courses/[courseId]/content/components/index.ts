@@ -33,3 +33,6 @@ export type {
   StatusValue,
   LessonType,
 } from "./workspace-types";
+
+// Re-export utility functions
+export { isPublished } from "./workspace-types";

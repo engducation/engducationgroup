@@ -56,7 +56,9 @@ export function ModuleFormDialog({
         </DialogHeader>
         <div className="space-y-4 px-1 pb-2">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Tên chương học *</label>
+            <label className="text-xs font-semibold text-slate-700">
+              Tên chương học <span className="text-red-500">*</span>
+            </label>
             <Input
               placeholder="VD: Chương 1 — Ngữ pháp cơ bản"
               value={title}
@@ -64,7 +66,9 @@ export function ModuleFormDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Mô tả</label>
+            <label className="text-xs font-semibold text-slate-700">
+              Mô tả <span className="text-slate-400 font-normal">(tùy chọn)</span>
+            </label>
             <Textarea
               placeholder="Mô tả ngắn gọn nội dung chương học..."
               className="resize-none text-sm"

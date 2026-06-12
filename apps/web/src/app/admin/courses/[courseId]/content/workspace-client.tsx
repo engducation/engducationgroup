@@ -304,6 +304,7 @@ export default function AdminCourseContentWorkspaceClient({
               key={moduleItem.id}
               module={moduleItem}
               moduleIndex={moduleIndex}
+              courseStatus={course?.status}
               onCreateLesson={openCreateLessonDialog}
               onEditModule={handleEditModule}
               onDeleteModule={(moduleId) => {

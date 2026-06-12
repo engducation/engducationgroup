@@ -302,7 +302,9 @@ function VocabularyFormCard({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Từ vựng *</label>
+            <label className="text-xs font-semibold text-slate-700">
+              Từ vựng <span className="text-red-500">*</span>
+            </label>
             <Input
               placeholder="VD: comfortable"
               value={form.word}
@@ -311,7 +313,9 @@ function VocabularyFormCard({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Từ loại *</label>
+            <label className="text-xs font-semibold text-slate-700">
+              Từ loại <span className="text-red-500">*</span>
+            </label>
             <select
               className="h-10 w-full rounded-lg border border-teal-200 bg-white px-3 text-sm focus:border-teal-400"
               value={form.partOfSpeech}
@@ -327,7 +331,9 @@ function VocabularyFormCard({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-600">Nghĩa *</label>
+          <label className="text-xs font-semibold text-slate-700">
+            Nghĩa <span className="text-red-500">*</span>
+          </label>
           <Input
             placeholder="VD: thoải mái, dễ chịu"
             value={form.meaning}
@@ -337,7 +343,9 @@ function VocabularyFormCard({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-600">Phiên âm</label>
+          <label className="text-xs font-semibold text-slate-700">
+            Phiên âm <span className="text-slate-400 font-normal">(tùy chọn)</span>
+          </label>
           <Input
             placeholder="VD: /ˈkʌmftəbl/"
             value={form.phonetic}
@@ -347,7 +355,9 @@ function VocabularyFormCard({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-600">Ví dụ</label>
+          <label className="text-xs font-semibold text-slate-700">
+            Ví dụ <span className="text-slate-400 font-normal">(tùy chọn)</span>
+          </label>
           <Textarea
             placeholder="VD: The hotel room was very comfortable."
             value={form.example}
@@ -357,7 +367,9 @@ function VocabularyFormCard({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-600">Ghi chú</label>
+          <label className="text-xs font-semibold text-slate-700">
+            Ghi chú <span className="text-slate-400 font-normal">(tùy chọn)</span>
+          </label>
           <Textarea
             placeholder="Ghi chú bổ sung..."
             value={form.notes}

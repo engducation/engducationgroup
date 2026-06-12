@@ -60,7 +60,9 @@ export function CourseEditDialog({
         </DialogHeader>
         <div className="space-y-4 px-1 pb-2">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Tên khóa học *</label>
+            <label className="text-xs font-semibold text-slate-700">
+              Tên khóa học <span className="text-red-500">*</span>
+            </label>
             <Input
               placeholder="VD: English for Beginners"
               value={form.title}
@@ -68,7 +70,9 @@ export function CourseEditDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Mô tả ngắn</label>
+            <label className="text-xs font-semibold text-slate-700">
+              Mô tả ngắn <span className="text-slate-400 font-normal">(tùy chọn)</span>
+            </label>
             <Textarea
               placeholder="Mô tả ngắn gọn về khóa học..."
               className="resize-none text-sm"
@@ -77,7 +81,9 @@ export function CourseEditDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Mô tả chi tiết</label>
+            <label className="text-xs font-semibold text-slate-700">
+              Mô tả chi tiết <span className="text-slate-400 font-normal">(tùy chọn)</span>
+            </label>
             <Textarea
               placeholder="Mô tả chi tiết nội dung khóa học..."
               className="resize-none text-sm min-h-24"
@@ -87,7 +93,9 @@ export function CourseEditDialog({
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600">Level</label>
+              <label className="text-xs font-semibold text-slate-700">
+                Level <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              </label>
               <select
                 className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                 value={form.level}
@@ -99,7 +107,9 @@ export function CourseEditDialog({
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600">Ngôn ngữ</label>
+              <label className="text-xs font-semibold text-slate-700">
+                Ngôn ngữ <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              </label>
               <Input
                 placeholder="VD: English"
                 value={form.language}

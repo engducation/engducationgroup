@@ -297,12 +297,27 @@ export default function LessonConfigClient({
           );
           setQuizQuestions(
             Array.isArray(quizData.questions) && quizData.questions.length > 0
-              ? (quizData.questions as QuizQuestion[]).map((item) => ({
-                  question: item.question ?? "",
-                  options: item.options ?? ["", ""],
-                  correctOption: item.correctOption ?? 0,
-                  explanation: item.explanation ?? "",
-                }))
+              ? (quizData.questions as QuizQuestion[]).map((item) => {
+                  // Parse options if it's a JSON string, otherwise use as-is
+                  let parsedOptions: string[] = ["", ""];
+                  if (item.options) {
+                    if (typeof item.options === "string") {
+                      try {
+                        parsedOptions = JSON.parse(item.options);
+                      } catch {
+                        parsedOptions = [item.options];
+                      }
+                    } else if (Array.isArray(item.options)) {
+                      parsedOptions = item.options as string[];
+                    }
+                  }
+                  return {
+                    question: item.question ?? "",
+                    options: parsedOptions,
+                    correctOption: item.correctOption ?? 0,
+                    explanation: item.explanation ?? "",
+                  };
+                })
               : EMPTY_QUESTIONS
           );
         }

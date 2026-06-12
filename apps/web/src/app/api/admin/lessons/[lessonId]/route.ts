@@ -10,7 +10,8 @@ export async function GET(
 
   try {
     const { lessonId } = await context.params;
-    const data = await adminService.getLessonById(lessonId);
+    // Use getLessonContent to include all related records (read, write, video, quiz, vocabulary)
+    const data = await adminService.getLessonContent(lessonId);
     return apiOk(data);
   } catch (error) {
     return apiError(error, "Không thể lấy thông tin bài học");

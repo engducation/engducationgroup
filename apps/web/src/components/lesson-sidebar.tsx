@@ -266,12 +266,7 @@ export function LessonSidebar({ courseId, modules, currentLessonId }: LessonSide
               <span className="truncate">Bài tiếp</span>
               <ArrowRight className="size-3.5" />
             </Link>
-          ) : (
-            <div className="flex-1 flex items-center justify-end gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-xs font-medium text-white">
-              <CheckCircle2 className="size-3.5" />
-              <span>Hoàn thành</span>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

@@ -1,9 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle2, FilePenLine, Send, Loader2, AlertCircle, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+/**
+ * WritingLesson - UI cho bài Writing trong lesson viewer.
+ *
+ * Phiên bản tối ưu:
+ *   - Tự động fetch + restore nội dung + AI feedback từ DB khi mount.
+ *   - KHÔNG auto-save: học viên phải bấm "Lưu bản nháp" thì mới lưu.
+ *     Tránh spam Server Action mỗi lần gõ phím (giảm tải cho Groq quota).
+ *   - Nộp bài gọi AI service thật, hiển thị analysis (highlight lỗi +
+ *     popover + phiên bản hoàn chỉnh + gợi ý).
+ *   - Sau khi nộp vẫn cho phép "Viết lại" để tạo bản mới.
+ *   - Hiển thị cảnh báo rõ ràng khi có thay đổi chưa lưu để tránh mất bài.
+ *
+ * Props interface được giữ nguyên để tương thích với lesson-viewer-client.
+ */
+
+import * as React from "react";
+import { AlertCircle, FileWarning, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { useWritingLesson } from "@/features/learning-content/hooks/useWritingLesson";
+import { WritingAnalysisPanel } from "@/features/learning-content/components/writing/writing-analysis-panel";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { SubmissionActionBar } from "./writing-lesson-actions";
+import { WritingEditor, WritingGradingCriteria, WritingPrompt, WritingTips } from "./writing-lesson-content";
+import { WritingHeader } from "./writing-lesson-header";
+import { WritingLessonSkeleton } from "./writing-lesson-skeleton";
+import { SaveDraftButton } from "./writing-lesson-save-draft";
 
 interface WritingLessonProps {
   lessonId: string;
@@ -15,6 +37,10 @@ interface WritingLessonProps {
   onComplete: (content: string) => void;
 }
 
+const MIN_WORDS_TO_SUBMIT = 5;
+const MIN_CHARS_TO_SHOW_SAVE_STATUS = 20;
+const MIN_CHARS_TO_ENABLE_SAVE = 5;
+
 export function WritingLesson({
   lessonId,
   title,
@@ -24,204 +50,168 @@ export function WritingLesson({
   isCompleted,
   onComplete,
 }: WritingLessonProps) {
-  const [content, setContent] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [wordCount, setWordCount] = useState(0);
-  const [isFocused, setIsFocused] = useState(false);
+  // Stable callback so the hook doesn't recreate `submit` on every render.
+  const handleSubmitted = React.useCallback(() => {
+    onComplete("");
+  }, [onComplete]);
 
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value;
-    setContent(text);
-    const words = text.trim().split(/\s+/).filter((w) => w.length > 0);
-    setWordCount(words.length);
-  };
+  const lesson = useWritingLesson({
+    lessonId,
+    initialCompleted: isCompleted,
+    onSubmitted: handleSubmitted,
+  });
 
-  const handleSubmit = async () => {
-    if (content.trim().length < 10) return;
+  const {
+    content,
+    setContent,
+    writeId,
+    isLoading,
+    analysis,
+    submissionStatus,
+    isSavingDraft,
+    lastSavedAt,
+    isSubmitting,
+    error,
+    isReadOnly,
+    hasUnsavedChanges,
+    saveDraft,
+    submit,
+    resetForRewrite,
+  } = lesson;
 
-    setIsSubmitting(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulated API call
-      onComplete(content);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const wordCount = React.useMemo(() => {
+    const t = content.trim();
+    return t.length === 0 ? 0 : t.split(/\s+/).length;
+  }, [content]);
 
   const characterCount = content.length;
-  const meetsMinimumLength = wordCount >= (wordCountGuidance || 50);
-  const meetsMinimumChars = characterCount >= 100;
+  const meetsWordMinimum = wordCount >= MIN_WORDS_TO_SUBMIT;
+  const canSaveDraft =
+    !isReadOnly &&
+    !isSavingDraft &&
+    !isSubmitting &&
+    characterCount >= MIN_CHARS_TO_ENABLE_SAVE;
+  const showAnalysis = !!analysis && isReadOnly;
 
+  // Warn user about unsaved changes before they navigate away / close tab.
+  React.useEffect(() => {
+    if (!hasUnsavedChanges || isReadOnly) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsavedChanges, isReadOnly]);
+
+  // ─── Loading state ─────────────────────────────────────────────────────
+  if (isLoading) {
+    return <WritingLessonSkeleton />;
+  }
+
+  if (!writeId) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle />
+        <AlertTitle>Bài học chưa cấu hình bài viết</AlertTitle>
+        <AlertDescription>
+          Vui lòng liên hệ giáo viên để được hỗ trợ.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // ─── Main view ─────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">
-            <FilePenLine className="size-3 mr-1" />
-            Bài viết Writing
-          </span>
-          {isCompleted && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">
-              <CheckCircle2 className="size-3" />
-              Đã hoàn thành
+      <WritingHeader
+        title={title}
+        isReadOnly={isReadOnly}
+        submissionStatus={submissionStatus}
+        wordCount={wordCount}
+        wordCountGuidance={wordCountGuidance}
+        isSavingDraft={isSavingDraft}
+        lastSavedAt={lastSavedAt}
+        showSaveStatus={
+          !isReadOnly && characterCount >= MIN_CHARS_TO_SHOW_SAVE_STATUS
+        }
+      />
+
+      <WritingPrompt prompt={prompt} />
+
+      {gradingCriteria && <WritingGradingCriteria criteria={gradingCriteria} />}
+
+      {/* Manual save reminder — shown only when user has unsaved content. */}
+      {!isReadOnly && hasUnsavedChanges && characterCount >= MIN_CHARS_TO_ENABLE_SAVE && (
+        <Alert className="border-amber-200 bg-amber-50/80 text-amber-900">
+          <FileWarning className="size-4 text-amber-600" />
+          <AlertTitle>Bạn có thay đổi chưa được lưu</AlertTitle>
+          <AlertDescription>
+            Hệ thống <strong>không tự động lưu</strong> bản nháp. Hãy bấm
+            nút <strong>&quot;Lưu bản nháp&quot;</strong> phía dưới để tránh
+            mất bài khi tải lại trang.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {showAnalysis && (
+        <WritingAnalysisPanel originalText={content} analysis={analysis} />
+      )}
+
+      {error && !isReadOnly && (
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>Không thể lưu/nộp bài</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <WritingEditor
+        content={content}
+        onChange={setContent}
+        isReadOnly={isReadOnly}
+        isSubmitting={isSubmitting}
+        characterCount={characterCount}
+      />
+
+      {!isReadOnly && <WritingTips wordCountGuidance={wordCountGuidance} />}
+
+      {/* Save-draft row sits just above the submit row so the two states
+          (đã lưu / chưa lưu) are visible right before the user commits. */}
+      {!isReadOnly && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <Sparkles className="size-3.5 text-indigo-500" />
+            <span>
+              {hasUnsavedChanges
+                ? "Bạn đang có thay đổi chưa lưu."
+                : "Mọi thay đổi đã được lưu."}
             </span>
-          )}
-        </div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">{title}</h1>
-
-        {/* Word count indicator */}
-        <div className="flex items-center gap-4 mt-3">
-          <div className="flex-1">
-            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  meetsMinimumLength
-                    ? "bg-gradient-to-r from-emerald-400 to-teal-500"
-                    : "bg-amber-400"
-                }`}
-                style={{
-                  width: `${Math.min(100, (wordCount / (wordCountGuidance || 100)) * 100)}%`,
-                }}
-              />
-            </div>
           </div>
-          <span
-            className={`text-sm font-medium shrink-0 ${
-              meetsMinimumLength ? "text-emerald-600" : "text-amber-600"
-            }`}
-          >
-            {wordCount} / {wordCountGuidance || 50} từ
-          </span>
-        </div>
-      </div>
-
-      {/* Writing Prompt */}
-      <div className="bg-amber-50 rounded-2xl border border-amber-100 p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex size-8 items-center justify-center rounded-full bg-amber-200 shrink-0">
-            <FilePenLine className="size-4 text-amber-700" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-amber-900 mb-2">Yêu cầu bài viết</h3>
-            <div className="prose prose-sm prose-amber max-w-none">
-              <p className="text-amber-800 whitespace-pre-wrap">{prompt}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Grading Criteria */}
-      {gradingCriteria && (
-        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
-          <div className="flex items-start gap-3">
-            <div className="flex size-8 items-center justify-center rounded-full bg-slate-200 shrink-0">
-              <Sparkles className="size-4 text-slate-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-slate-700 mb-2">Tiêu chí đánh giá</h3>
-              <div className="prose prose-sm prose-slate max-w-none">
-                <p className="text-slate-600 whitespace-pre-wrap">{gradingCriteria}</p>
-              </div>
-            </div>
-          </div>
+          <SaveDraftButton
+            onSave={async () => {
+              const ok = await saveDraft();
+              if (ok) {
+                toast.success("Đã lưu bản nháp vào cơ sở dữ liệu.");
+              } else {
+                toast.error("Không thể lưu bản nháp. Vui lòng thử lại.");
+              }
+            }}
+            disabled={!canSaveDraft}
+            isSaving={isSavingDraft}
+            isDirty={hasUnsavedChanges}
+          />
         </div>
       )}
 
-      {/* Writing Area */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
-          <span className="text-sm font-medium text-slate-600">Viết bài của bạn</span>
-          <span
-            className={`text-xs ${
-              meetsMinimumChars ? "text-emerald-600" : "text-slate-400"
-            }`}
-          >
-            {characterCount} ký tự
-          </span>
-        </div>
-        <Textarea
-          value={content}
-          onChange={handleContentChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder="Bắt đầu viết bài của bạn ở đây..."
-          className={`min-h-[300px] border-0 rounded-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 ${
-            isFocused ? "bg-white" : "bg-slate-50/50"
-          }`}
-          disabled={isCompleted}
-        />
-      </div>
-
-      {/* Writing Tips */}
-      <div className="bg-indigo-50 rounded-2xl border border-indigo-100 p-5">
-        <h3 className="font-semibold text-indigo-900 mb-3">Mẹo viết bài</h3>
-        <ul className="space-y-2 text-sm text-indigo-700">
-          <li className="flex items-start gap-2">
-            <span className="text-indigo-400 mt-0.5">•</span>
-            Viết ít nhất {wordCountGuidance || 50} từ để đạt yêu cầu.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-indigo-400 mt-0.5">•</span>
-            Sử dụng từ vựng và cấu trúc câu đa dạng.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-indigo-400 mt-0.5">•</span>
-            Kiểm tra chính tả và ngữ pháp trước khi nộp.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-indigo-400 mt-0.5">•</span>
-            Nộp bài để nhận phản hồi từ AI.
-          </li>
-        </ul>
-      </div>
-
-      {/* Submit Button */}
-      {!isCompleted && (
-        <div className="flex flex-col items-center">
-          {!meetsMinimumLength ? (
-            <div className="flex items-center gap-2 text-amber-600 text-sm">
-              <AlertCircle className="size-4" />
-              <span>Cần viết ít nhất {wordCountGuidance || 50} từ để nộp bài</span>
-            </div>
-          ) : null}
-
-          <Button
-            onClick={handleSubmit}
-            disabled={!meetsMinimumLength || isSubmitting}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 mt-2"
-            size="lg"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Đang nộp bài...
-              </>
-            ) : (
-              <>
-                <Send className="size-4" />
-                Nộp bài viết
-              </>
-            )}
-          </Button>
-        </div>
-      )}
-
-      {isCompleted && (
-        <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-6 text-center">
-          <div className="flex justify-center mb-3">
-            <div className="flex size-12 items-center justify-center rounded-full bg-emerald-100">
-              <CheckCircle2 className="size-6 text-emerald-600" />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold text-emerald-900">
-            Bạn đã nộp bài viết này!
-          </h3>
-          <p className="text-sm text-emerald-600 mt-1">
-            Bài viết của bạn đã được ghi nhận. Tiếp tục với bài học tiếp theo.
-          </p>
-        </div>
-      )}
+      <SubmissionActionBar
+        isReadOnly={isReadOnly}
+        isSubmitting={isSubmitting}
+        canSubmit={meetsWordMinimum && !isSubmitting}
+        wordCount={wordCount}
+        onSubmit={submit}
+        onRewrite={resetForRewrite}
+      />
     </div>
   );
 }

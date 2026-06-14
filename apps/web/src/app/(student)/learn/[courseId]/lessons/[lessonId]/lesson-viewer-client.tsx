@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { LessonSidebar } from "@/components/lesson-sidebar";
@@ -94,7 +93,6 @@ export function LessonViewerClient({
   currentLesson,
   initialProgress,
 }: LessonViewerClientProps) {
-  const router = useRouter();
   const [progress, setProgress] = useState(initialProgress || {
     readCompleted: false,
     writeCompleted: false,
@@ -103,8 +101,16 @@ export function LessonViewerClient({
     vocabularyReviewed: false,
   });
 
+  // Avoid duplicate POSTs if a user double-clicks an "Hoàn thành" button
+  // while the network request is still in flight.
+  const inFlightRef = useRef<Set<string>>(new Set());
+
   const markCompleted = useCallback(
     async (type: "video" | "read" | "quiz" | "writing" | "vocabulary") => {
+      const dedupeKey = `${currentLesson.id}:${type}`;
+      if (inFlightRef.current.has(dedupeKey)) return;
+      inFlightRef.current.add(dedupeKey);
+
       try {
         const response = await fetch("/api/student/progress", {
           method: "POST",
@@ -118,13 +124,18 @@ export function LessonViewerClient({
         const data = await response.json();
 
         if (data.success) {
-          // Update local progress
+          // Update local progress — no router.refresh() needed.
+          // The local React state already drives the lesson UI, and the
+          // sidebar re-fetches on its own via the LessonSidebar's
+          // per-mount data flow. Calling router.refresh() here would
+          // re-execute the entire Server Component tree (page.tsx runs
+          // 6-8 DB queries), so we skip it during the test period to
+          // keep API usage low.
           setProgress((prev) => ({
             ...prev,
             [`${type === "vocabulary" ? "vocabularyReviewed" : type + "Completed"}`]: true,
           }));
           toast.success("Đã đánh dấu hoàn thành!");
-          router.refresh();
         } else {
           throw new Error(data.message || "Có lỗi xảy ra");
         }
@@ -132,9 +143,11 @@ export function LessonViewerClient({
         toast.error(
           err instanceof Error ? err.message : "Không thể cập nhật tiến độ"
         );
+      } finally {
+        inFlightRef.current.delete(dedupeKey);
       }
     },
-    [currentLesson.id, router]
+    [currentLesson.id]
   );
 
   const handleVideoComplete = useCallback(() => {
@@ -164,21 +177,24 @@ export function LessonViewerClient({
           if (data.success) {
             setProgress((prev) => ({ ...prev, quizCompleted: true }));
             toast.success("Quiz đã được lưu!");
-            router.refresh();
           }
         })
         .catch(() => {
           toast.error("Không thể lưu kết quả quiz");
         });
     },
-    [currentLesson.id, router]
+    [currentLesson.id]
   );
 
   const handleWritingComplete = useCallback(
-    (content: string) => {
-      markCompleted("writing");
+    (_content: string) => {
+      // Intentionally a no-op: the server action `submitWritingAction`
+      // already calls `upsertWriteProgress` inside the writing service,
+      // so calling `/api/student/progress` here would double-write.
+      // The local progress UI in `WritingLesson` already shows the
+      // completed state via the hook's `isCompleted` flag.
     },
-    [markCompleted]
+    []
   );
 
   const handleVocabularyComplete = useCallback(() => {

@@ -15,7 +15,7 @@ Tài liệu này chuẩn hóa lại toàn bộ cấu trúc công nghệ, luồng
 ## 1. TECH STACK CÔNG NGHỆ CẬP NHẬT (UPDATED TECHNICAL STACK)
 
 *   **Framework chính:** Next.js 14+ (App Router), vận hành theo mô hình Fullstack tích hợp (Server Components, Server Actions và Route Handlers).
-*   **Hạ tầng AI:** **Groq API** (Sử dụng các mô hình mã nguồn mở tốc độ cao như `llama3-70b-8192` hoặc `mixtral-8x7b-32768`) kết hợp cùng **Vercel AI SDK (Core & Agents)**. Thay thế hoàn toàn cho OpenAI API để giảm chi phí token xuống mức tối thiểu và đạt tốc độ phản hồi tính bằng mili-giây.
+*   **Hạ tầng AI:** **Groq API** (Sử dụng model production `openai/gpt-oss-120b` kết hợp **JSON Object Mode** (`response_format: { type: "json_object" }`) + Zod parse thay vì `json_schema` strict. Lý do: strict mode + gpt-oss-120b đã quan sát thấy fail không ổn định với `json_validate_failed` ngay cả khi model output hợp lệ. Zod parse phía client vẫn đảm bảo 100% schema contract, kèm retry 1 lần cho flaky outputs. Lịch sử thay đổi: `llama3-70b-8192` decommissioned 30/08/2025, `llama-3.3-70b-versatile` không hỗ trợ `json_schema`) kết hợp cùng **Vercel AI SDK (Core & Agents)**. Thay thế hoàn toàn cho OpenAI API để giảm chi phí token xuống mức tối thiểu và đạt tốc độ phản hồi tính bằng mili-giây.
 *   **Thư viện UI:** Tailwind CSS kết hợp **shadcn/ui** dựng trên nền Radix Primitives.
 *   **Cơ sở dữ liệu & Xác thực:** PostgreSQL/MongoDB hỗ trợ phân quyền kiểm soát truy cập dựa trên vai trò (Role-based Access Control - RBAC). Xác thực thông qua giải pháp tích hợp sẵn trong Next.js (Better-Auth hoặc NextAuth).
 *   **Quản lý Media:** **Cloudinary SDK** tích hợp trực tiếp ở tầng Server Actions để xử lý tải lên, lưu trữ và truyền tải video bài giảng qua CDN công cộng.
@@ -26,7 +26,7 @@ Tài liệu này chuẩn hóa lại toàn bộ cấu trúc công nghệ, luồng
 ## 2. ĐẶC TẢ NGHIỆP VỤ & KIẾN TRÚC AI AGENTS CHUYÊN SÂU
 
 ### 2.1. Kiến trúc AI Agent với Vercel AI SDK & Groq
-Hệ thống không gọi trực tiếp một dòng lệnh Prompt duy nhất, mà sử dụng cơ chế **Agentic Workflow** (Luồng tác nhân thông minh) chia làm hai bước xử lý song song hoặc nối tiếp thông qua hàm `generateObject` hoặc `streamObject` của Vercel AI SDK.
+Hệ thống không gọi trực tiếp một dòng lệnh Prompt duy nhất, mà sử dụng cơ chế **Agentic Workflow** (Luồng tác nhân thông minh) chia làm hai bước xử lý song song hoặc nối tiếp thông qua hàm `generateText` (parse thủ công bằng Zod) hoặc `streamText` của Vercel AI SDK.
 
 
 ```
@@ -55,7 +55,7 @@ Dưới đây là cấu trúc logic xử lý phía Server của Next.js đặt t
 
 ```typescript
 import { createGroq } from '@ai-sdk/groq';
-import { generateObject } from 'ai';
+import { generateText } from 'ai';
 import { z } from 'zod';
 import crypto from 'crypto';
 
@@ -98,15 +98,17 @@ export async function analyzeWritingContent(userId: string, isPremium: boolean, 
 
   try {
     // Gọi mô hình ngôn ngữ lớn thông qua hạ tầng Groq với độ trễ cực thấp
-    const { object } = await generateObject({
-      model: groq('llama3-70b-8192'),
-      schema: writingAnalysisSchema,
-      system: `You are an expert ESL Writing Assistant Agent. Your role is to analyze English sentences provided by Vietnamese students. 
-      Analyze spelling, grammar structures, and writing styles. 
-      Provide all explanations and suggestions strictly in Vietnamese. 
-      Be concise, direct, and pragmatic.`,
+    // Sử dụng generateText + response_format json_object (không phải json_schema strict
+    // vì strict mode + gpt-oss-120b đã quan sát thấy fail không ổn định với json_validate_failed
+    // ngay cả khi output hợp lệ). Zod parse phía client đảm bảo schema contract.
+    const { text } = await generateText({
+      model: groq('openai/gpt-oss-120b'),
+      system: `You are an expert ESL Writing Assistant Agent. ...`,
       prompt: `Analyze this text: "${cleanText}"`,
-      temperature: 0.2, // Giảm độ sáng tạo để kết quả chính xác, ổn định cấu trúc JSON
+      temperature: 0.2,
+      providerOptions: { groq: { structuredOutputs: false } },
+    });
+    // Parse JSON output, backfill missing fields, validate bằng Zod (có retry 1 lần nếu fail).
     });
 
     // Lưu kết quả vào bộ nhớ đệm trước khi trả về

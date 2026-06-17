@@ -4,6 +4,15 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { PackageType } from "@/features/enrollment/services/upgrade.service";
 
+/**
+ * @deprecated Hook này chỉ còn để backward-compat. Tốt hơn hãy dùng
+ * `useCreateOrder` từ `@/features/payment/hooks/use-create-order` + navigate
+ * sang `/upgrade/[orderId]` thay vì chờ sync.
+ *
+ * Mình giữ nó vì có thể vẫn còn chỗ nào đó import. Tự detect response shape:
+ *   - Cũ: { success, transactionId, newExpiresAt }  (đã simulate)
+ *   - Mới: { success, data: { checkoutUrl, orderId } }  (SePay flow — navigate sang QR)
+ */
 export interface UseUpgradeOptions {
   onSuccess?: (transactionId: string, newExpiresAt: Date) => void;
   onError?: (error: string) => void;
@@ -43,15 +52,34 @@ export function useUpgrade(options?: UseUpgradeOptions) {
         const data = await response.json();
 
         if (data.success) {
-          const newExpiresAt = new Date(data.newExpiresAt);
+          // Response mới (SePay flow): navigate sang QR page
+          if (data.data?.checkoutUrl) {
+            router.push(data.data.checkoutUrl as never);
+            setState({
+              isLoading: false,
+              isSuccess: true,
+              error: null,
+              transactionId: data.data.orderId ?? null,
+              newExpiresAt: null,
+            });
+            return;
+          }
+
+          // Response cũ (backward-compat): parse newExpiresAt
+          const newExpiresAt = data.newExpiresAt
+            ? new Date(data.newExpiresAt)
+            : new Date();
           setState({
             isLoading: false,
             isSuccess: true,
             error: null,
-            transactionId: data.transactionId,
+            transactionId: data.transactionId ?? null,
             newExpiresAt,
           });
-          options?.onSuccess?.(data.transactionId, newExpiresAt);
+          options?.onSuccess?.(
+            data.transactionId ?? "legacy",
+            newExpiresAt,
+          );
         } else {
           const errorMsg = data.error || "Có lỗi xảy ra";
           setState((prev) => ({
@@ -67,7 +95,7 @@ export function useUpgrade(options?: UseUpgradeOptions) {
         options?.onError?.(errorMsg);
       }
     },
-    [options]
+    [options, router]
   );
 
   const getSubscriptionInfo = useCallback(async () => {

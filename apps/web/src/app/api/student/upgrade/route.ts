@@ -1,81 +1,71 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { simulatePremiumUpgrade, PACKAGE_TYPES } from "@/features/enrollment/services/upgrade.service";
+import { z } from "zod";
+import { createSepayOrder } from "@/features/payment/services/order.service";
+
+/**
+ * Backward-compatible upgrade endpoint — chuyển sang SePay flow.
+ *
+ * Flow cũ (simulate ngay tức thì) đã được thay bằng flow mới (tạo order → trả
+ * về orderId, frontend tự navigate sang /upgrade/[orderId] để hiển thị QR).
+ * Endpoint này giữ lại để không vỡ bất kỳ client cũ nào đang gọi.
+ */
+
+const bodySchema = z.object({
+  packageType: z.enum(["MONTHLY", "6_MONTH", "YEAR"]).default("MONTHLY"),
+});
 
 export async function POST(request: Request) {
-  try {
-    // Step 1: Authenticate user
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
-
-    // Step 2: Parse request body
-    const body = await request.json();
-    const { packageType } = body;
-
-    // Default to MONTHLY if not specified
-    const selectedPackage = PACKAGE_TYPES.includes(packageType) ? packageType : "MONTHLY";
-
-    // Step 3: Process upgrade (Action 1 + 2 + 3)
-    const result = await simulatePremiumUpgrade(userId, selectedPackage);
-
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      transactionId: result.transactionId,
-      newExpiresAt: result.newExpiresAt,
-      message: "Nâng cấp tài khoản Premium thành công!",
-    });
-  } catch (error) {
-    console.error("Upgrade API error:", error);
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) {
     return NextResponse.json(
-      { success: false, error: "Lỗi server khi xử lý yêu cầu" },
-      { status: 500 }
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
     );
   }
-}
 
-export async function GET(request: Request) {
+  let body: z.infer<typeof bodySchema> = { packageType: "MONTHLY" };
   try {
-    // Step 1: Authenticate user
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
+    const text = await request.text();
+    if (text) body = bodySchema.parse(JSON.parse(text));
+  } catch (err) {
+    if (err instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { success: false, error: "Invalid body" },
+        { status: 400 },
       );
     }
+    return NextResponse.json(
+      { success: false, error: "Invalid JSON" },
+      { status: 400 },
+    );
+  }
 
-    const userId = session.user.id;
-
-    // Get current subscription info
-    const { getCurrentSubscriptionInfo } = await import("@/features/enrollment/services/upgrade.service");
-    const info = await getCurrentSubscriptionInfo(userId);
+  try {
+    const { order } = await createSepayOrder({
+      userId: session.user.id,
+      packageType: body.packageType,
+    });
 
     return NextResponse.json({
       success: true,
-      subscriptionPlan: info.subscriptionPlan,
-      expiresAt: info.expiresAt,
-      isActive: info.isActive,
+      data: {
+        orderId: order.id,
+        orderCode: order.orderCode,
+        qrUrl: order.qrUrl,
+        expiresAt: order.expiresAt,
+        checkoutUrl: `/upgrade/${order.id}`,
+        message: "Đơn hàng đã được tạo. Vui lòng chuyển hướng tới trang QR.",
+      },
     });
   } catch (error) {
-    console.error("Subscription info API error:", error);
     return NextResponse.json(
-      { success: false, error: "Lỗi server khi xử lý yêu cầu" },
-      { status: 500 }
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Lỗi server khi xử lý yêu cầu",
+      },
+      { status: 500 },
     );
   }
 }

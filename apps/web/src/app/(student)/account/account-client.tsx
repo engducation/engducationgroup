@@ -29,6 +29,9 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ChangePasswordSection } from "@/components/change-password-section";
+import { useCreateOrder } from "@/features/payment/hooks/use-create-order";
+import type { PackageType } from "@/features/payment/types/schemas";
 
 interface AccountClientProps {
   user: {
@@ -43,7 +46,16 @@ interface AccountClientProps {
   daysRemaining: number;
 }
 
-const PACKAGES = [
+const PACKAGES: Array<{
+  type: PackageType;
+  label: string;
+  price: number;
+  duration: number;
+  description: string;
+  features: string[];
+  recommended?: boolean;
+  originalPrice?: number;
+}> = [
   {
     type: "MONTHLY",
     label: "Gói 1 Tháng",
@@ -109,9 +121,12 @@ export function AccountClient({
   daysRemaining,
 }: AccountClientProps) {
   const router = useRouter();
-  const [selectedPackage, setSelectedPackage] = useState("6_MONTH");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<PackageType>("6_MONTH");
+  const { createOrder, isLoading } = useCreateOrder({
+    onSuccess: (order) => {
+      router.push(`/upgrade/${order.id}` as never);
+    },
+  });
 
   // Refresh subscription status periodically
   useEffect(() => {
@@ -124,51 +139,13 @@ export function AccountClient({
   }, [isPremium, router]);
 
   const handleUpgrade = async () => {
-    setIsLoading(true);
     try {
-      const response = await fetch("/api/student/upgrade", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packageType: selectedPackage }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setIsSuccess(true);
-        setTimeout(() => {
-          router.push("/courses");
-          router.refresh();
-        }, 2000);
-      } else {
-        alert(data.error || "Có lỗi xảy ra. Vui lòng thử lại.");
-      }
+      await createOrder(selectedPackage);
     } catch (error) {
-      console.error("Payment error:", error);
-      alert("Có lỗi xảy ra. Vui lòng thử lại.");
-    } finally {
-      setIsLoading(false);
+      // Error already shown via hook state
+      console.error("Order create error:", error);
     }
   };
-
-  // Success screen
-  if (isSuccess) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#f8f7f4]/80 backdrop-blur-sm">
-        <div className="text-center animate-in fade-in-0 zoom-in-95 duration-300">
-          <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-xl">
-            <Check className="size-10 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">
-            Nâng cấp thành công!
-          </h2>
-          <p className="text-slate-500">
-            Đang chuyển hướng về trang khóa học...
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -277,6 +254,9 @@ export function AccountClient({
         </CardContent>
       </Card>
 
+      {/* Change Password Section */}
+      <ChangePasswordSection />
+
       {/* Upgrade Section - Only show if not premium */}
       {!isPremium && (
         <div className="space-y-6">
@@ -353,7 +333,7 @@ export function AccountClient({
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Thông tin thanh toán</CardTitle>
               <CardDescription>
-                Thanh toán qua chuyển khoản ngân hàng (mô phỏng)
+                Sau khi bấm "Tiếp tục" bạn sẽ nhận mã QR SePay để chuyển khoản
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -369,16 +349,6 @@ export function AccountClient({
                   <span className="font-semibold">
                     {PACKAGES.find((p) => p.type === selectedPackage)?.duration} ngày
                   </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Nội dung CK:</span>
-                  <code className="text-xs bg-slate-100 px-2 py-1 rounded">
-                    NAP TIEN {selectedPackage}
-                  </code>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Ngân hàng:</span>
-                  <span className="font-semibold">Engducation Bank</span>
                 </div>
               </div>
 
@@ -401,18 +371,19 @@ export function AccountClient({
                 {isLoading ? (
                   <>
                     <Loader2 className="size-5 mr-2 animate-spin" />
-                    Đang xử lý...
+                    Đang tạo đơn...
                   </>
                 ) : (
                   <>
                     <Crown className="size-5 mr-2" />
-                    Xác nhận nâng cấp Premium
+                    Tiếp tục thanh toán
                   </>
                 )}
               </Button>
 
               <p className="text-xs text-slate-400 text-center">
-                * Đây là trang thanh toán giả lập. Nhấn nút trên để kích hoạt Premium ngay lập tức.
+                * Hệ thống sẽ tạo đơn hàng SePay và hiển thị mã QR. Sau khi chuyển
+                khoản thành công, tài khoản sẽ tự động được nâng cấp Premium.
               </p>
             </CardContent>
           </Card>

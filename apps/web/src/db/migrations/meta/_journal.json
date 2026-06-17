@@ -50,6 +50,20 @@
       "when": 1781165935451,
       "tag": "0006_previous_doctor_strange",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781425185579,
+      "tag": "0007_chunky_green_goblin",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781587123104,
+      "tag": "0008_add_payment_code_patterns",
+      "breakpoints": true
     }
   ]
 }

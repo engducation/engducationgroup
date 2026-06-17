@@ -7,14 +7,18 @@ import {
   type OrderStatus,
   type PackageType,
 } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import {
   sepayWebhookPayloadSchema,
   type SepayWebhookPayload,
   type WebhookProcessResult,
 } from "../types/schemas";
-import { getOrderByCode, isSepayTransactionProcessed } from "./order.service";
+import {
+  getOrderByCode,
+  isSepayTransactionProcessed,
+  markOrderExpiredIfDue,
+} from "./order.service";
 import { grantSubscriptionInTx, type DbTx } from "./subscription.service";
 import { parseOrderCodeFromContent } from "./vietqr.service";
 
@@ -218,13 +222,17 @@ export async function processSepayWebhook(
     return { kind: "order_already_settled", orderId: order.id };
   }
 
-  // ─── BƯỚC 3.5: Auto-expire fallback (defense-in-depth) ────────────────────
-  // Nếu cron job không chạy (Vercel Hobby bị skip, project ít traffic),
-  // ta vẫn expire order ngay khi webhook nhận được CK quá hạn.
-  // Điều này đảm bảo UX: user không bị "treo" PENDING mãi khi CK muộn.
+  // ─── LAZY EXPIRY (chốt chặn 2: webhook guard) ───────────────────────────
+  // Trong kiến trúc Lazy Expiry, polling API (chốt 1) là nơi expire chính.
+  // Webhook này đóng vai trò guard khi học viên đóng trình duyệt rồi CK muộn:
+  // SePay bắn tiền về sau >15 phút, polling không chạy nữa → webhook phải
+  // tự phát hiện và chặn, không cho settle lên Premium sai quy trình.
+  //
+  // Hàm `markOrderExpiredIfDue` (từ order.service) là single source of truth:
+  // idempotent + safe race (vì điều kiện `status = PENDING` trong WHERE).
   const now = new Date();
   if (order.expiresAt < now) {
-    await markOrderExpired(order.id);
+    await markOrderExpiredIfDue(order, now);
     return {
       kind: "order_expired",
       orderId: order.id,
@@ -339,24 +347,3 @@ export async function manualApproveSepayOrder(
 
 // Re-export DbTx for callers
 export type { DbTx };
-
-/**
- * Mark a PENDING order as EXPIRED.
- *
- * Được dùng làm FALLBACK khi cron job không kịp chạy (Vercel Hobby plan
- * skip cron nếu project không có traffic). Nếu webhook SePay nhận được
- * CK cho order đã quá hạn, ta expire ngay tại đây thay vì settle.
- *
- * Idempotent: nếu order không còn PENDING thì bỏ qua.
- */
-export async function markOrderExpired(orderId: string): Promise<void> {
-  await db
-    .update(orders)
-    .set({
-      status: "EXPIRED" as OrderStatus,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(eq(orders.id, orderId), eq(orders.status, "PENDING" as OrderStatus)),
-    );
-}

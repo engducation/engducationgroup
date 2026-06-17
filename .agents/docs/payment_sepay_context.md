@@ -26,6 +26,13 @@ Student tạo order  →  Server sinh orderCode + VietQR URL
        Polling client phát hiện SUCCESS → refresh session → redirect
 ```
 
+> **Kiến trúc expiry**: Lazy Expiry — KHÔNG dùng cron job. Hết hạn được
+> phát hiện tại 2 chốt chặn (xem §5):
+> 1. **Polling API** (chốt chính): GET `/api/payment/orders/[id]` tự check
+>    `expiresAt` mỗi lần student mở máy ngồi xem countdown.
+> 2. **Webhook SePay** (chốt phụ): khi học viên đóng trình duyệt nhưng
+>    SePay bắn tiền về sau 15 phút, webhook tự chặn không cho settle.
+
 ### 3 gói thanh toán
 
 | Code | Label | VND | Ngày Premium |
@@ -57,9 +64,9 @@ Student tạo order  →  Server sinh orderCode + VietQR URL
 │  API ROUTES (Next.js App Router)                           │
 │  - POST /api/payment/orders         (tạo order)            │
 │  - GET  /api/payment/orders         (list orders)          │
-│  - GET  /api/payment/orders/[id]    (polling status)       │
-│  - POST /api/payment/sepay-webhook  (SePay callback)        │
-│  - GET  /api/cron/expire-orders     (cron 5 phút)          │
+│  - GET  /api/payment/orders/[id]    (polling + lazy expire)│
+│  - POST /api/payment/sepay-webhook  (SePay callback + lazy)│
+│  - GET  /api/payment/test-mode/simulate (dev only)        │
 │  - /api/admin/payment/code-patterns (admin CRUD patterns)  │
 └─────────────────────────────────────────────────────────────┘
                           ↓
@@ -181,13 +188,13 @@ dịch có nội dung bắt đầu bằng 3 mã này → đơn hàng treo PENDIN
   `code`, `content`, `transferType`, `description`, `transferAmount`,
   `referenceCode`
 
-### 4.2. Xử lý 5 bước (theo `processSepayWebhook`)
+### 4.2. Xử lý 6 bước (theo `processSepayWebhook`)
 
 ```
 1. HMAC verify         → fail: 403, SePay retry
 2. Idempotency check   → nếu payload.id đã có → return ok (200)
 3. Tìm & đối soát      → resolve orderCode (ưu tiên payload.code, fallback parse content)
-   3.5. Auto-expire    → nếu order.expiresAt < now → mark EXPIRED → return order_expired
+3.5. Lazy Expiry guard → nếu order.expiresAt < now → markOrderExpiredIfDue → return order_expired
 4. Amount check        → nếu transferAmount < order.amount → reject
 5. Settle              → trong transaction: grant sub + update order + insert tx
 ```
@@ -204,30 +211,69 @@ dịch có nội dung bắt đầu bằng 3 mã này → đơn hàng treo PENDIN
 
 ---
 
-## 5. Cron Job
+## 5. Lazy Expiry (không dùng Cron Job)
 
-### 5.1. Config
+### 5.1. Triết lý
 
-File: `vercel.json` (root)
+Thay vì một cron job quét Database mỗi 5 phút (phụ thuộc Vercel Pro hoặc
+bên thứ 3, có thể bị skip khi project ít traffic), hệ thống **tự phát hiện
+và cập nhật trạng thái EXPIRED ngay tại thời điểm phát sinh yêu cầu dữ
+liệu** (Just-in-Time Check).
 
-```json
-{
-  "crons": [
-    { "path": "/api/cron/expire-orders", "schedule": "*/5 * * * *" }
-  ]
+### 5.2. Hai chốt chặn kiểm tra
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Chốt 1: Polling API                                                 │
+│ GET /api/payment/orders/[orderId]                                   │
+│                                                                     │
+│ - Student đang ở màn QR + countdown 15 phút                         │
+│ - Frontend polling mỗi 3s gọi API này                              │
+│ - Service `getOrderById` tự check `expiresAt` so với hiện tại:      │
+│     Nếu PENDING && expiresAt < now → UPDATE sang EXPIRED           │
+│ - Response trả về status mới → UI tự hiển thị màn hình hết hạn    │
+└─────────────────────────────────────────────────────────────────────┘
+                              +
+┌─────────────────────────────────────────────────────────────────────┐
+│ Chốt 2: Webhook SePay (guard khi student đóng trình duyệt)          │
+│ POST /api/payment/sepay-webhook                                     │
+│                                                                     │
+│ - Sau HMAC verify + tìm được order tương ứng, trước khi settle:     │
+│     Nếu order.expiresAt < now → gọi `markOrderExpiredIfDue`         │
+│     → trả về `order_expired` → KHÔNG grant Premium                  │
+│ - Lưu lịch sử thô trong `sepay_transactions` cho admin đối soát    │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 5.3. Single source of truth
+
+Cả 2 chốt chặn đều gọi chung hàm `markOrderExpiredIfDue(order, now)`
+trong `src/features/payment/services/order.service.ts`:
+
+```typescript
+export async function markOrderExpiredIfDue(
+  order: { id: string; status: string; expiresAt: Date },
+  now: Date = new Date(),
+): Promise<...> {
+  if (order.status !== "PENDING") return null;
+  if (order.expiresAt >= now) return null;
+  // UPDATE ... WHERE id = ? AND status = 'PENDING' AND expiresAt < now
+  // → idempotent + safe race (2 nguồn cùng expire 1 order thì chỉ 1 thắng)
 }
 ```
 
-### 5.2. Logic
+Hàm này idempotent nhờ điều kiện `status = PENDING` trong `WHERE`.
 
-- Mỗi 5 phút scan orders `PENDING` có `expiresAt < now`
-- Set status = `EXPIRED`
-- Authorize qua header `Authorization: Bearer ${CRON_SECRET}`
+### 5.4. Kết quả
 
-### 5.3. Defense-in-depth (đã có)
-
-Webhook SePay cũng check `expiresAt` ở bước 3.5 — nếu cron skip trên
-Vercel Hobby, webhook vẫn expire đúng. **Không phụ thuộc cron 100%**.
+- Hết hạn được phát hiện trong vòng **3 giây** (một chu kỳ polling) thay
+  vì tệ nhất 5 phút như cron.
+- Không phụ thuộc vào hạ tầng Cron, không cần `CRON_SECRET`.
+- Không phát sinh request rác cho các order không có ai xem (cron quét
+  cả bảng, dù không có ai mở app).
+- Đơn PENDING không ai mở app + SePay không bắn tiền → vẫn ở PENDING
+  cho tới khi có tương tác (admin xem, hoặc student quay lại). Đây là
+  behavior mong muốn: tránh update vô ích.
 
 ---
 
@@ -272,10 +318,9 @@ Khi detect `PENDING → SUCCESS`:
 
 ### API routes
 - `src/app/api/payment/orders/route.ts` — POST/GET
-- `src/app/api/payment/orders/[orderId]/route.ts` — GET (polling)
-- `src/app/api/payment/sepay-webhook/route.ts` — POST (SePay)
+- `src/app/api/payment/orders/[orderId]/route.ts` — GET (polling + lazy expire)
+- `src/app/api/payment/sepay-webhook/route.ts` — POST (SePay + lazy expire guard)
 - `src/app/api/payment/test-mode/simulate/route.ts` — dev only
-- `src/app/api/cron/expire-orders/route.ts` — cron
 - `src/app/api/admin/payment/code-patterns/route.ts` — GET/POST
 - `src/app/api/admin/payment/code-patterns/[code]/route.ts` — PATCH/DELETE
 
@@ -301,7 +346,6 @@ Khi detect `PENDING → SUCCESS`:
 - `SEPAY_WEBHOOK_SECRET` — HMAC secret
 - `SEPAY_BANK_ACCOUNT` / `SEPAY_BANK_CODE` / `SEPAY_ACCOUNT_NAME` — TK nhận
 - `ORDER_EXPIRY_MINUTES` — mặc định 15
-- `CRON_SECRET` — auth cho cron endpoint
 
 ---
 
@@ -331,6 +375,23 @@ Khi detect `PENDING → SUCCESS`:
 - Chỉ giữ 3 pattern active: `DAY`, `MONTH`, `YEAR`
 - Random là số nguyên 8 chữ số (thay vì alphanumeric)
 - 4 pattern thừa (ENGPRM, PRM, VIP, COURSE) → soft-delete
+
+### 2026-06-17: Refactor sang Lazy Expiry
+
+**Vấn đề**:
+1. Vercel Cron Job trên Hobby plan có thể bị skip khi project ít traffic
+   → đơn PENDING treo tới 5 phút mới expire.
+2. Cron quét toàn bộ bảng orders dù không có ai mở app → request rác.
+3. Phải giữ secret `CRON_SECRET` trong env chỉ để auth cron endpoint.
+
+**Đã fix**:
+- **Chuyển sang Lazy Expiry**: bỏ hoàn toàn cron job, đơn hết hạn được
+  phát hiện tại 2 chốt chặn (polling API + webhook SePay). Cả 2 cùng gọi
+  helper `markOrderExpiredIfDue` (idempotent + safe race).
+- **Bỏ file**: `src/app/api/cron/expire-orders/route.ts` (đã xóa).
+- **Bỏ config**: `crons` trong `vercel.json`, `CRON_SECRET` trong env.
+- **Kết quả**: hết hạn được phát hiện trong vòng 3 giây (một chu kỳ
+  polling) thay vì tệ nhất 5 phút.
 
 ### Migration
 
@@ -407,11 +468,14 @@ Khi có bug liên quan payment, kiểm tra theo thứ tự:
    - [ ] `PACKAGE_PRICES` có khớp với giá thực tế SePay nhận?
    - [ ] Số tiền trong payload SePay có khớp với order.amount?
 
-4. **Cron không expire order**
-   - [ ] Vercel Hobby có thể skip cron khi ít traffic — đã có auto-expire
-     trong webhook (bước 3.5) làm fallback.
-   - [ ] Check `CRON_SECRET` env có set.
-   - [ ] Check `expires_at < now` query có đúng.
+4. **Đơn PENDING không expire**
+   - [ ] Student có đang mở app và polling không? Lazy Expiry phụ thuộc vào
+     polling API hoặc webhook SePay. Nếu student đóng app + SePay không bắn
+     tiền → order vẫn PENDING (đây là behavior mong muốn, tránh update rác).
+   - [ ] Check logic `markOrderExpiredIfDue` trong `order.service.ts` — có
+     điều kiện `status = PENDING && expiresAt < now` không.
+   - [ ] Có order nào bị kẹt ở status khác PENDING không? Helper chỉ expire
+     nếu `status === 'PENDING'`.
 
 5. **Cache trả về data cũ**
    - [ ] Tất cả payment API đã có `Cache-Control: no-store`?
@@ -427,5 +491,6 @@ Khi có bug liên quan payment, kiểm tra theo thứ tự:
   Đồng thời phải thêm dòng tương ứng trong SePay dashboard.
 - Nếu upgrade Better-Auth lớn, kiểm tra internal `setSessionCookie` API
   (pattern trong plugin `session-refresh` dùng internal — có thể break).
-- Cron chỉ là defense layer 1; webhook tự expire là layer 2 chính.
-- Khi lên prod Vercel: kiểm tra tab Cron Jobs active, monitor logs mỗi 5p.
+- Hệ thống không dùng cron job. Mọi thao tác expire đều chạy lazily tại
+  polling API + webhook SePay. Nếu trong tương lai cần thêm job nền khác
+  (vd: gửi email nhắc nợ), đánh giá lại để tránh phụ thuộc Vercel Cron.

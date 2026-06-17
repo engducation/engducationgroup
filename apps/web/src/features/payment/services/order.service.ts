@@ -92,8 +92,17 @@ export async function createSepayOrder(
   return { order: toOrderSummary(inserted) };
 }
 
-// ─── Get Order (with ownership check) ───────────────────────────────────────
-
+// ─── Get Order (with ownership check + lazy expiry) ─────────────────────────
+//
+// Lazy Expiry: nếu order vẫn PENDING mà đã quá `expiresAt` so với hiện tại
+// → update sang EXPIRED ngay trong request này (Just-in-Time). Trả về
+// OrderSummary mới nhất cho client, UI sẽ tự hiển thị màn hình hết hạn.
+//
+// Lợi ích so với cron job cũ:
+//   - Không phụ thuộc vào Vercel Cron (Hobby plan skip khi ít traffic).
+//   - Học viên ngồi xem countdown → polling API tự expire đúng giây phút 15:00.
+//   - Hai nguồn expire (polling + webhook) đều dùng chung `markOrderExpiredIfDue`
+//     → tránh double-write và race condition (vì điều kiện `status = PENDING`).
 export async function getOrderById(
   orderId: string,
   userId: string,
@@ -104,7 +113,16 @@ export async function getOrderById(
     .where(and(eq(orders.id, orderId), eq(orders.userId, userId)))
     .limit(1);
 
-  return row ? toOrderSummary(row) : null;
+  if (!row) return null;
+
+  // Lazy check: nếu PENDING mà quá hạn → expire ngay. Hàm helper chỉ mutate
+  // `status` (cùng id, expiresAt không đổi), nên ta mutate local `row.status`
+  // thay vì SELECT lại — tiết kiệm 1 round-trip.
+  const fresh = await markOrderExpiredIfDue(row, new Date());
+  if (fresh) {
+    row.status = fresh.status as OrderStatus;
+  }
+  return toOrderSummary(row);
 }
 
 // ─── Get Order (admin - no ownership check) ─────────────────────────────────
@@ -156,17 +174,37 @@ export async function getOrderByCode(orderCode: string) {
   return row ?? null;
 }
 
-// ─── Expire Pending Orders (Cron) ───────────────────────────────────────────
-// Set status = EXPIRED cho các order PENDING quá thời hạn. Trả về số lượng.
+// ─── Lazy Expiry helper (dùng chung cho polling + webhook) ──────────────────
+//
+// Nếu `order` đang PENDING và `expiresAt` đã qua so với `now` → set EXPIRED
+// ngay trong DB và trả về bản ghi mới. Ngược lại trả về `null` (không cần
+// update). Hàm này idempotent nhờ điều kiện `status = PENDING` trong WHERE.
+//
+// Đây là single source of truth cho cơ chế Lazy Expiry — cả polling API
+// lẫn webhook SePay đều gọi nó, không cần cron job chạy nền nữa.
+//
+// Lưu ý: hàm này KHÔNG ném lỗi nếu order đã ở trạng thái khác PENDING
+// → an toàn khi gọi nhiều lần cùng lúc (race giữa polling và webhook).
+export async function markOrderExpiredIfDue(
+  order: { id: string; status: string; expiresAt: Date },
+  now: Date = new Date(),
+): Promise<{ id: string; status: string; expiresAt: Date } | null> {
+  if (order.status !== "PENDING") return null;
+  if (order.expiresAt >= now) return null;
 
-export async function expirePendingOrders(now: Date = new Date()): Promise<number> {
-  const result = await db
+  const [updated] = await db
     .update(orders)
-    .set({ status: "EXPIRED", updatedAt: now })
-    .where(and(eq(orders.status, "PENDING"), lt(orders.expiresAt, now)))
-    .returning({ id: orders.id });
+    .set({ status: "EXPIRED" as OrderStatus, updatedAt: now })
+    .where(
+      and(
+        eq(orders.id, order.id),
+        eq(orders.status, "PENDING" as OrderStatus),
+        lt(orders.expiresAt, now),
+      ),
+    )
+    .returning({ id: orders.id, status: orders.status, expiresAt: orders.expiresAt });
 
-  return result.length;
+  return updated ?? null;
 }
 
 // ─── Idempotency check helper cho webhook ───────────────────────────────────

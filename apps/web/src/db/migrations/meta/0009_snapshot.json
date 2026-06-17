@@ -1,0 +1,116 @@
+{
+  "id": "c8e3a1b4-9d2f-4a5e-b7c8-d1e2f3a4b5c6",
+  "prevId": "2ec42bc7-0da3-4246-bef9-26b90176c421",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.admin_audit_log": {
+      "name": "admin_audit_log",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "notNull": true },
+        "admin_id": { "name": "admin_id", "type": "text", "primaryKey": false, "notNull": false },
+        "action": { "name": "action", "type": "text", "primaryKey": false, "notNull": false },
+        "target_type": { "name": "target_type", "type": "text", "primaryKey": false, "notNull": false },
+        "target_id": { "name": "target_id", "type": "text", "primaryKey": false, "notNull": false },
+        "details": { "name": "details", "type": "text", "primaryKey": false, "notNull": false },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "notNull": false, "default": "now()" }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "checks": {},
+      "compositePrimaryKeys": {}
+    },
+    "public.payment_code_patterns": {
+      "name": "payment_code_patterns",
+      "schema": "",
+      "columns": {
+        "code": { "name": "code", "type": "varchar(10)", "primaryKey": true, "notNull": true },
+        "description": { "name": "description", "type": "text", "primaryKey": false, "notNull": false },
+        "random_length": { "name": "random_length", "type": "integer", "primaryKey": false, "notNull": true, "default": 8 },
+        "is_active": { "name": "is_active", "type": "integer", "primaryKey": false, "notNull": true, "default": 1 },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" },
+        "updated_at": { "name": "updated_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" }
+      },
+      "indexes": {
+        "payment_code_patterns_active_idx": {
+          "name": "payment_code_patterns_active_idx",
+          "columns": [{ "expression": "is_active", "isExpression": false, "asc": true, "nulls": "last" }],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "checks": {},
+      "compositePrimaryKeys": {}
+    },
+    "public.sepay_transactions": {
+      "name": "sepay_transactions",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "notNull": true },
+        "order_id": { "name": "order_id", "type": "text", "primaryKey": false, "notNull": false },
+        "gateway": { "name": "gateway", "type": "text", "primaryKey": false, "notNull": false },
+        "amount_received": { "name": "amount_received", "type": "integer", "primaryKey": false, "notNull": false },
+        "transaction_date": { "name": "transaction_date", "type": "text", "primaryKey": false, "notNull": false },
+        "transfer_type": { "name": "transfer_type", "type": "text", "primaryKey": false, "notNull": false },
+        "account_number": { "name": "account_number", "type": "text", "primaryKey": false, "notNull": false },
+        "reference_code": { "name": "reference_code", "type": "text", "primaryKey": false, "notNull": false },
+        "description": { "name": "description", "type": "text", "primaryKey": false, "notNull": false },
+        "content": { "name": "content", "type": "text", "primaryKey": false, "notNull": false },
+        "accumulated": { "name": "accumulated", "type": "integer", "primaryKey": false, "notNull": false },
+        "received_at": { "name": "received_at", "type": "timestamp", "primaryKey": false, "notNull": false, "default": "now()" }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "checks": {},
+      "compositePrimaryKeys": {}
+    },
+    "public.orders": {
+      "name": "orders",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "notNull": true },
+        "user_id": { "name": "user_id", "type": "text", "primaryKey": false, "notNull": false },
+        "order_code": { "name": "order_code", "type": "text", "primaryKey": false, "notNull": false },
+        "package_type": { "name": "package_type", "type": "text", "primaryKey": false, "notNull": false },
+        "amount": { "name": "amount", "type": "integer", "primaryKey": false, "notNull": false },
+        "status": { "name": "status", "type": "text", "primaryKey": false, "notNull": false },
+        "payment_method": { "name": "payment_method", "type": "text", "primaryKey": false, "notNull": false },
+        "expires_at": { "name": "expires_at", "type": "timestamp", "primaryKey": false, "notNull": false },
+        "subscription_expires_at": { "name": "subscription_expires_at", "type": "timestamp", "primaryKey": false, "notNull": false },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "notNull": false, "default": "now()" },
+        "updated_at": { "name": "updated_at", "type": "timestamp", "primaryKey": false, "notNull": false, "default": "now()" }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "checks": {},
+      "compositePrimaryKeys": {}
+    },
+    "public.user": {
+      "name": "user",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "notNull": true },
+        "name": { "name": "name", "type": "text", "primaryKey": false, "notNull": false },
+        "email": { "name": "email", "type": "text", "primaryKey": false, "notNull": false },
+        "email_verified": { "name": "email_verified", "type": "boolean", "primaryKey": false, "notNull": false },
+        "image": { "name": "image", "type": "text", "primaryKey": false, "notNull": false },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "notNull": false, "default": "now()" },
+        "updated_at": { "name": "updated_at", "type": "timestamp", "primaryKey": false, "notNull": false, "default": "now()" },
+        "role": { "name": "role", "type": "text", "primaryKey": false, "notNull": false },
+        "subscription_plan": { "name": "subscription_plan", "type": "text", "primaryKey": false, "notNull": false },
+        "subscription_expires_at": { "name": "subscription_expires_at", "type": "timestamp", "primaryKey": false, "notNull": false },
+        "bio": { "name": "bio", "type": "text", "primaryKey": false, "notNull": false },
+        "ai_prompt_description": { "name": "ai_prompt_description", "type": "text", "primaryKey": false, "notNull": false }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "checks": {},
+      "compositePrimaryKeys": {}
+    }
+  },
+  "enums": {},
+  "meta": {
+    "provider": "pg"
+  }
+}

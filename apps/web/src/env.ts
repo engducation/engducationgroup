@@ -19,7 +19,9 @@ export const env = createEnv({
     SEPAY_BANK_CODE: z.string().min(2),
     SEPAY_ACCOUNT_NAME: z.string().min(2),
     ORDER_EXPIRY_MINUTES: z.coerce.number().int().positive().default(15),
-    CRON_SECRET: z.string().min(8).optional(),
+    // CRON_SECRET đã được loại bỏ khi chuyển sang Lazy Expiry:
+    // đơn hàng hết hạn giờ do polling API + webhook SePay tự phát hiện,
+    // không cần cron job ngầm nữa.
   },
   client: {
     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z.string().min(1),
@@ -42,7 +44,6 @@ export const env = createEnv({
     SEPAY_BANK_CODE: process.env.SEPAY_BANK_CODE,
     SEPAY_ACCOUNT_NAME: process.env.SEPAY_ACCOUNT_NAME,
     ORDER_EXPIRY_MINUTES: process.env.ORDER_EXPIRY_MINUTES,
-    CRON_SECRET: process.env.CRON_SECRET,
     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
     NEXT_PUBLIC_CLOUDINARY_API_KEY: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
     NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,

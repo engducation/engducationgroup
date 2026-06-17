@@ -8,6 +8,11 @@ export const dynamic = "force-dynamic";
 
 // GET /api/payment/orders/[orderId]
 // Trả về OrderSummary cho client polling. Có ownership check.
+//
+// Lazy Expiry (chốt 1): `getOrderById` tự check `expiresAt` so với hiện tại;
+// nếu order PENDING mà quá hạn → service UPDATE sang EXPIRED ngay trong
+// request này và trả về status mới. Client UI sẽ tự hiển thị màn hình
+// hết hạn mà không cần cron job ngầm.
 export async function GET(
   _request: Request,
   context: { params: Promise<{ orderId: string }> },

@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Clock, XCircle, AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, Clock, XCircle, AlertTriangle, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Countdown } from "./payment-countdown";
 import { Payment } from "./payment-shell";
+import { useCancelOrder } from "../hooks/use-cancel-order";
 
 /**
  * Panel status phía dưới QR card. Tự động start polling khi mount.
@@ -16,8 +19,16 @@ interface PaymentStatusPanelProps {
 }
 
 export function PaymentStatusPanel({ onSuccess }: PaymentStatusPanelProps) {
+  const router = useRouter();
   const { order, isPolling, startPolling, stopPolling } = Payment.usePayment();
   const [hasNavigated, setHasNavigated] = useState(false);
+  const { cancelOrder, isLoading: isCancelling, error: cancelError } = useCancelOrder({
+    onSuccess: () => {
+      // Dừng polling trước khi navigate để tránh race với state EXPIRED.
+      stopPolling();
+      router.push("/upgrade");
+    },
+  });
 
   // Auto-start polling khi mount
   useEffect(() => {
@@ -34,6 +45,15 @@ export function PaymentStatusPanel({ onSuccess }: PaymentStatusPanelProps) {
       return () => clearTimeout(id);
     }
   }, [order?.status, hasNavigated, onSuccess]);
+
+  const handleCancel = () => {
+    if (!order) return;
+    const confirmed = window.confirm(
+      "Bạn có chắc muốn hủy đơn hàng này? Bạn có thể tạo đơn mới sau.",
+    );
+    if (!confirmed) return;
+    void cancelOrder(order.id);
+  };
 
   if (!order) return null;
 
@@ -119,6 +139,22 @@ export function PaymentStatusPanel({ onSuccess }: PaymentStatusPanelProps) {
           </div>
           <Countdown expiresAt={order.expiresAt} />
         </div>
+
+        {cancelError && (
+          <p className="text-xs text-red-600">{cancelError}</p>
+        )}
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleCancel}
+          disabled={isCancelling}
+          className="w-full border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+        >
+          <X className="size-3.5" />
+          {isCancelling ? "Đang hủy..." : "Hủy thanh toán"}
+        </Button>
       </CardContent>
     </Card>
   );

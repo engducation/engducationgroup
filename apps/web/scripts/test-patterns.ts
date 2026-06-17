@@ -23,9 +23,13 @@ async function test() {
     console.log(`  "${input}" → ${out ?? "(no match)"}`);
   }
 
-  console.log("\n🧪 Test generateOrderCode (5 lần):");
-  for (let i = 0; i < 5; i++) {
-    console.log(`  → ${await generateOrderCode()}`);
+  // Generate theo từng pattern active (mỗi pattern 2 lần để verify
+  // phần random là số nguyên 8 chữ số, không bị trùng).
+  for (const patternCode of ["DAY", "MONTH", "YEAR"]) {
+    console.log(`\n🧪 Test generateOrderCode(pattern="${patternCode}", 2 lần):`);
+    for (let i = 0; i < 2; i++) {
+      console.log(`  → ${await generateOrderCode({ preferredCode: patternCode })}`);
+    }
   }
 }
 

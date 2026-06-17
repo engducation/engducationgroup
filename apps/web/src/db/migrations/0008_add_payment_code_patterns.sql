@@ -8,3 +8,13 @@ CREATE TABLE "payment_code_patterns" (
 );
 --> statement-breakpoint
 CREATE INDEX "payment_code_patterns_active_idx" ON "payment_code_patterns" USING btree ("is_active");
+--> statement-breakpoint
+-- Seed default patterns. Mapping với packageType trong vietqr.service.ts:
+--   MONTHLY → DAY, 6_MONTH → MONTH, YEAR → YEAR
+-- Phải khớp với Mã thanh toán đã khai báo trong SePay dashboard.
+INSERT INTO "payment_code_patterns" ("code", "description", "random_length", "is_active")
+VALUES
+	('DAY',   'Mã cho các gói theo ngày (DAY prefix)',  8, 1),
+	('MONTH', 'Mã cho các gói theo tháng (MONTH prefix)', 8, 1),
+	('YEAR',  'Mã cho các gói theo năm (YEAR prefix)', 8, 1)
+ON CONFLICT ("code") DO NOTHING;

@@ -64,6 +64,13 @@
       "when": 1781587123104,
       "tag": "0008_add_payment_code_patterns",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1750708800000,
+      "tag": "0009_seed_payment_code_patterns",
+      "breakpoints": true
     }
   ]
 }

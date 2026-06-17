@@ -10,8 +10,8 @@ import type { PackageType } from "@/db/schema";
 // Fallback prefix khi bảng `payment_code_patterns` chưa được seed (dev mới
 // setup, hoặc DB lỗi). Logic chính đọc từ DB qua `order-code-pattern.service`.
 
-export const FALLBACK_PATTERN_CODE = "ENGPRM";
-export const ORDER_CODE_RANDOM_LENGTH = 8; // 8 chữ số
+export const FALLBACK_PATTERN_CODE = "ENG";
+export const ORDER_CODE_RANDOM_LENGTH = 7; // 7 chữ số (khoảng 6-8 chữ số, chọn 7 cân bằng unique/dễ đọc)
 
 // Regex trích xuất fallback (chỉ dùng khi DB rỗng). Phần random là số nguyên.
 export const FALLBACK_ORDER_CODE_REGEX = new RegExp(
@@ -36,7 +36,7 @@ export const PACKAGE_LABELS: Record<string, string> = {
 // Số tiền VND cho mỗi gói (single source of truth).
 export const PACKAGE_PRICES: Record<string, number> = {
   MONTHLY: 49000,
-  "6_MONTH": 269000,
+  "6_MONTH": 249000,
   YEAR: 499000,
 };
 
@@ -45,10 +45,14 @@ export const PACKAGE_PRICES: Record<string, number> = {
 // Mapping cố định giữa gói học và prefix SePay. Mỗi gói sinh mã có prefix
 // riêng để Admin dễ phân loại doanh thu khi đối soát trên SePay dashboard.
 //
-// Quy tắc:
-//   - MONTHLY  → "DAY"     (gói 1 tháng — đánh dấu "mua theo kỳ ngắn")
-//   - 6_MONTH  → "MONTH"   (gói 6 tháng)
-//   - YEAR     → "YEAR"    (gói 1 năm)
+// Quy tắc (cập nhật 2026-06):
+//   - MONTHLY (49k)  → "DAY"   → "DAY" + 7 số  (vd: DAY4827163)
+//   - 6_MONTH (249k) → "MONTH" → "MONTH" + 7 số (vd: MONTH3948215)
+//   - YEAR     (499k)→ "YEAR"  → "YEAR" + 7 số (vd: YEAR7293816)
+//
+// Phần random dài 7 chữ số (khoảng 6-8, chọn 7 để cân bằng uniqueness vs.
+// dễ đọc trên biên lai ngân hàng). Sinh bằng `crypto.randomInt` nên không
+// trùng giữa các request đồng thời.
 //
 // BẮT BUỘC phải khớp với các dòng đã khai báo trong SePay dashboard
 // (my.sepay.vn → Cài đặt → Mã thanh toán). Nếu thiếu 1 dòng ở SePay
@@ -72,13 +76,13 @@ export const PACKAGE_PATTERN_CODE: Record<PackageType, string> = {
  * detail (randomLength) và sinh mã.
  *
  * Ví dụ:
- *   generateOrderCode("MONTHLY") → "DAY67619637"
- *   generateOrderCode("6_MONTH") → "MONTH23889028"
- *   generateOrderCode("YEAR")   → "YEAR16596206"
+ *   generateOrderCode("MONTHLY") → "DAY4827163"
+ *   generateOrderCode("6_MONTH") → "MONTH3948215"
+ *   generateOrderCode("YEAR")   → "YEAR7293816"
  *
  * Nếu pattern tương ứng không active trong DB → throw error. Nếu DB lỗi /
- * chưa seed → fallback về "ENGPRMxxxxxxxx" để app không crash (giữ backward
- * compat cho môi trường dev chưa setup).
+ * chưa seed → fallback về "ENGPRMxxxxxxx" (7 số) để app không crash (giữ
+ * backward compat cho môi trường dev chưa setup).
  */
 export async function generateOrderCode(packageType: PackageType): Promise<string> {
   const patternCode = PACKAGE_PATTERN_CODE[packageType];

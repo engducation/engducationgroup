@@ -18,18 +18,18 @@ import { randomInt } from "node:crypto";
 const DEFAULT_PATTERNS = [
   {
     code: "DAY",
-    description: "Mã cho các gói theo ngày (DAY prefix)",
-    randomLength: 8,
+    description: "Mã cho gói 1 Tháng (49k) — DAY + 7 số",
+    randomLength: 7,
   },
   {
     code: "MONTH",
-    description: "Mã cho các gói theo tháng (MONTH prefix)",
-    randomLength: 8,
+    description: "Mã cho gói 6 Tháng (249k) — MONTH + 7 số",
+    randomLength: 7,
   },
   {
     code: "YEAR",
-    description: "Mã cho các gói theo năm (YEAR prefix)",
-    randomLength: 8,
+    description: "Mã cho gói 1 Năm (499k) — YEAR + 7 số",
+    randomLength: 7,
   },
 ];
 

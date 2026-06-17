@@ -170,14 +170,25 @@ export const submitQuizSchema = z.object({
 export type SubmitQuizInput = z.infer<typeof submitQuizSchema>;
 
 // ─── Writing Submission ───────────────────────────────────────────────────────
+//
+// Schemas và types được tách sang `./schemas-writing.ts` để giữ file này
+// dưới ngưỡng 250 dòng. Re-export tại đây để callers chỉ cần import từ
+// `@/features/learning-content/types`.
 
-export const submitWritingSchema = z.object({
-  writeId: z.string().min(1),
-  content: z.string().min(1),
-  requestAiReview: z.boolean().default(false),
-});
-
-export type SubmitWritingInput = z.infer<typeof submitWritingSchema>;
+export {
+  writingErrorSchema,
+  writingAnalysisSchema,
+  submitWritingSchema,
+  getWritingSubmissionSchema,
+  loadWritingForLessonSchema,
+  saveWritingDraftSchema,
+  type WritingError,
+  type WritingAnalysis,
+  type SubmitWritingInput,
+  type GetWritingSubmissionInput,
+  type LoadWritingForLessonInput,
+  type SaveWritingDraftInput,
+} from "./schemas-writing";
 
 // ─── Progress ────────────────────────────────────────────────────────────────
 

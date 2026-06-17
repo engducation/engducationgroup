@@ -7,8 +7,8 @@ import {
   buildOrderQrUrl,
   generateOrderCode,
   PACKAGE_LABELS,
-  PACKAGE_PRICES,
 } from "./vietqr.service";
+import { getPackageByType } from "./packages";
 import type { OrderSummary, PackageType } from "../types/schemas";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -42,11 +42,12 @@ function toOrderSummary(order: {
   createdAt: Date;
 }): OrderSummary {
   const packageType = order.packageType as PackageType;
+  const pkg = getPackageByType(packageType);
   return {
     id: order.id,
     orderCode: order.orderCode,
     packageType,
-    packageLabel: PACKAGE_LABELS[packageType] ?? packageType,
+    packageLabel: pkg?.label ?? PACKAGE_LABELS[packageType] ?? packageType,
     amount: order.amount,
     status: order.status as OrderSummary["status"],
     expiresAt: new Date(order.expiresAt).toISOString(),
@@ -65,11 +66,12 @@ function toOrderSummary(order: {
 export async function createSepayOrder(
   input: CreateSepayOrderInput,
 ): Promise<CreateSepayOrderResult> {
-  const amount = PACKAGE_PRICES[input.packageType];
-  if (!amount) {
-    // Zod đã validate ở route layer, nhưng defensive check vẫn an toàn.
+  // Lấy giá từ packages.ts (single source of truth) — throw nếu type lạ.
+  const pkg = getPackageByType(input.packageType);
+  if (!pkg) {
     throw new Error(`Invalid package type: ${input.packageType}`);
   }
+  const amount = pkg.price;
 
   const id = `ord_${nanoid(14)}`;
   const orderCode = await generateOrderCode(input.packageType);

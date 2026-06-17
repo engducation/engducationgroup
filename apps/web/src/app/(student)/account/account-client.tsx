@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ChangePasswordSection } from "@/components/change-password-section";
 import { useCreateOrder } from "@/features/payment/hooks/use-create-order";
+import { PACKAGES, type PackageInfo } from "@/features/payment/services/packages";
 import type { PackageType } from "@/features/payment/types/schemas";
 
 interface AccountClientProps {
@@ -45,61 +46,6 @@ interface AccountClientProps {
   isPremium: boolean;
   daysRemaining: number;
 }
-
-const PACKAGES: Array<{
-  type: PackageType;
-  label: string;
-  price: number;
-  duration: number;
-  description: string;
-  features: string[];
-  recommended?: boolean;
-  originalPrice?: number;
-}> = [
-  {
-    type: "MONTHLY",
-    label: "Gói 1 Tháng",
-    price: 49000,
-    duration: 30,
-    description: "Truy cập tất cả khóa học trong 30 ngày",
-    features: [
-      "Học từ vựng theo danh mục",
-      "Làm quiz trắc nghiệm cơ bản",
-      "Xem video bài giảng",
-    ],
-    recommended: false,
-  },
-  {
-    type: "6_MONTH",
-    label: "Gói 6 Tháng",
-    price: 269000,
-    duration: 180,
-    originalPrice: 294000,
-    description: "Tiết kiệm 8% - Truy cập trong 180 ngày",
-    features: [
-      "Tất cả quyền lợi gói 1 Tháng",
-      "Xem không giới hạn video bài giảng",
-      "Quiz trắc nghiệm nâng cao",
-      "AI Writing Assistant (giới hạn)",
-    ],
-    recommended: true,
-  },
-  {
-    type: "YEAR",
-    label: "Gói 1 Năm",
-    price: 499000,
-    duration: 365,
-    originalPrice: 588000,
-    description: "Tiết kiệm 15% - Truy cập trong 365 ngày",
-    features: [
-      "Tất cả quyền lợi gói 6 Tháng",
-      "AI Writing Assistant không giới hạn",
-      "Báo cáo phân tích lộ trình học tập",
-      "Hỗ trợ ưu tiên 24/7",
-    ],
-    recommended: false,
-  },
-];
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("vi-VN").format(price) + "đ";
@@ -276,55 +222,12 @@ export function AccountClient({
           {/* Package Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {PACKAGES.map((pkg) => (
-              <button
+              <AccountPackageCard
                 key={pkg.type}
-                onClick={() => setSelectedPackage(pkg.type)}
-                className={`relative flex flex-col rounded-2xl border-2 p-5 text-left transition-all ${
-                  selectedPackage === pkg.type
-                    ? "border-indigo-500 bg-indigo-50/50 shadow-lg shadow-indigo-500/10"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-md"
-                }`}
-              >
-                {pkg.recommended && (
-                  <span className="absolute -top-3 left-4 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
-                    Phổ biến nhất
-                  </span>
-                )}
-
-                <div className="space-y-3 flex-1">
-                  <div>
-                    <h3 className="font-bold text-slate-900">{pkg.label}</h3>
-                    <div className="flex items-baseline gap-1 mt-1">
-                      <span className="text-2xl font-extrabold text-slate-900">
-                        {formatPrice(pkg.price)}
-                      </span>
-                      {pkg.originalPrice && (
-                        <span className="text-sm text-slate-400 line-through">
-                          {formatPrice(pkg.originalPrice)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-500">{pkg.description}</p>
-
-                  <ul className="space-y-2">
-                    {pkg.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-xs text-slate-600">
-                        <Check className="size-3.5 text-emerald-500 mt-0.5 shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Selected indicator */}
-                {selectedPackage === pkg.type && (
-                  <div className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-indigo-500 shadow-lg">
-                    <Check className="size-4 text-white" />
-                  </div>
-                )}
-              </button>
+                pkg={pkg}
+                selected={selectedPackage === pkg.type}
+                onSelect={setSelectedPackage}
+              />
             ))}
           </div>
 
@@ -453,5 +356,65 @@ export function AccountClient({
         </div>
       )}
     </div>
+  );
+}
+
+interface AccountPackageCardProps {
+  pkg: PackageInfo;
+  selected: boolean;
+  onSelect: (type: PackageType) => void;
+}
+
+function AccountPackageCard({ pkg, selected, onSelect }: AccountPackageCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(pkg.type)}
+      className={`relative flex flex-col rounded-2xl border-2 p-5 text-left transition-all ${
+        selected
+          ? "border-indigo-500 bg-indigo-50/50 shadow-lg shadow-indigo-500/10"
+          : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-md"
+      }`}
+    >
+      {pkg.recommended && (
+        <span className="absolute -top-3 left-4 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+          Phổ biến nhất
+        </span>
+      )}
+
+      <div className="space-y-3 flex-1">
+        <div>
+          <h3 className="font-bold text-slate-900">{pkg.label}</h3>
+          <div className="flex items-baseline gap-1 mt-1">
+            <span className="text-2xl font-extrabold text-slate-900">
+              {formatPrice(pkg.price)}
+            </span>
+            {pkg.originalPrice && (
+              <span className="text-sm text-slate-400 line-through">
+                {formatPrice(pkg.originalPrice)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-500">{pkg.description}</p>
+
+        <ul className="space-y-2">
+          {pkg.features.map((feature, idx) => (
+            <li key={idx} className="flex items-start gap-2 text-xs text-slate-600">
+              <Check className="size-3.5 text-emerald-500 mt-0.5 shrink-0" />
+              {feature}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Selected indicator */}
+      {selected && (
+        <div className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-indigo-500 shadow-lg">
+          <Check className="size-4 text-white" />
+        </div>
+      )}
+    </button>
   );
 }

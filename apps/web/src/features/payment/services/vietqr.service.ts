@@ -4,13 +4,19 @@ import {
   generateOrderCode as generateOrderCodeFromDb,
   parseOrderCodeFromContent as parseOrderCodeFromContentFromDb,
 } from "./order-code-pattern.service";
+import { getPackagePrice, PACKAGES } from "./packages";
 import type { PackageType } from "@/db/schema";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 // Fallback prefix khi bảng `payment_code_patterns` chưa được seed (dev mới
 // setup, hoặc DB lỗi). Logic chính đọc từ DB qua `order-code-pattern.service`.
+//
+// LƯU Ý: Prefix fallback PHẢI khớp với regex FALLBACK_ORDER_CODE_REGEX bên
+// dưới và là 1 string nguyên vẹn (vd: "ENGPRM"). Nếu cắt ngắn (vd: "ENG"),
+// mã sinh ra sẽ KHÔNG match regex ở parseOrderCodeFromContent → webhook
+// SePay không tìm được order → treo PENDING mãi.
 
-export const FALLBACK_PATTERN_CODE = "ENG";
+export const FALLBACK_PATTERN_CODE = "ENGPRM";
 export const ORDER_CODE_RANDOM_LENGTH = 7; // 7 chữ số (khoảng 6-8 chữ số, chọn 7 cân bằng unique/dễ đọc)
 
 // Regex trích xuất fallback (chỉ dùng khi DB rỗng). Phần random là số nguyên.
@@ -18,27 +24,28 @@ export const FALLBACK_ORDER_CODE_REGEX = new RegExp(
   `${FALLBACK_PATTERN_CODE}([0-9]{${ORDER_CODE_RANDOM_LENGTH}})`,
 );
 
-// ─── Package Pricing ────────────────────────────────────────────────────────
-// Số ngày Premium cộng dồn cho mỗi gói.
+// ─── Package Pricing (re-export từ packages.ts để giữ tương thích ngược) ──
+//
+// PACKAGES, getPackagePrice, getPackageByType ở `./packages` là single source
+// of truth. Mọi UI + service phải đọc từ đó. Ba alias dưới đây chỉ để các
+// file cũ (vd: order.service.ts) không phải refactor import path ngay.
 
-export const PACKAGE_DURATIONS: Record<string, number> = {
-  MONTHLY: 30,
-  "6_MONTH": 180,
-  YEAR: 365,
-};
+export const PACKAGE_PRICES: Record<string, number> = Object.fromEntries(
+  PACKAGES.map((p) => [p.type, p.price]),
+);
 
-export const PACKAGE_LABELS: Record<string, string> = {
-  MONTHLY: "Gói 1 Tháng",
-  "6_MONTH": "Gói 6 Tháng",
-  YEAR: "Gói 1 Năm",
-};
+export const PACKAGE_DURATIONS: Record<string, number> = Object.fromEntries(
+  PACKAGES.map((p) => [p.type, p.duration]),
+);
 
-// Số tiền VND cho mỗi gói (single source of truth).
-export const PACKAGE_PRICES: Record<string, number> = {
-  MONTHLY: 49000,
-  "6_MONTH": 249000,
-  YEAR: 499000,
-};
+export const PACKAGE_LABELS: Record<string, string> = Object.fromEntries(
+  PACKAGES.map((p) => [p.type, p.label]),
+);
+
+/** Helper an toàn: lấy giá theo packageType, throw nếu không tồn tại. */
+export function getPackagePriceVnd(packageType: PackageType): number {
+  return getPackagePrice(packageType);
+}
 
 // ─── Order Code Prefix theo packageType ─────────────────────────────────────
 //
@@ -46,9 +53,9 @@ export const PACKAGE_PRICES: Record<string, number> = {
 // riêng để Admin dễ phân loại doanh thu khi đối soát trên SePay dashboard.
 //
 // Quy tắc (cập nhật 2026-06):
-//   - MONTHLY (49k)  → "DAY"   → "DAY" + 7 số  (vd: DAY4827163)
-//   - 6_MONTH (249k) → "MONTH" → "MONTH" + 7 số (vd: MONTH3948215)
-//   - YEAR     (499k)→ "YEAR"  → "YEAR" + 7 số (vd: YEAR7293816)
+//   - MONTHLY (49k)   → "DAY"   → "DAY" + 7 số   (vd: DAY4827163)
+//   - 6_MONTH (269k)  → "MONTH" → "MONTH" + 7 số (vd: MONTH3948215)
+//   - YEAR     (499k) → "YEAR"  → "YEAR" + 7 số  (vd: YEAR7293816)
 //
 // Phần random dài 7 chữ số (khoảng 6-8, chọn 7 để cân bằng uniqueness vs.
 // dễ đọc trên biên lai ngân hàng). Sinh bằng `crypto.randomInt` nên không

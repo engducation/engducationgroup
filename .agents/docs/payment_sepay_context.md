@@ -41,10 +41,12 @@ Student tạo order  →  Server sinh orderCode + VietQR URL
 | `6_MONTH` | Gói 6 Tháng | 269.000 | 180 |
 | `YEAR` | Gói 1 Năm | 499.000 | 365 |
 
-Định nghĩa tại `src/features/payment/services/vietqr.service.ts`:
-- `PACKAGE_PRICES` (single source of truth)
-- `PACKAGE_LABELS`
-- `PACKAGE_DURATIONS`
+Định nghĩa tại `src/features/payment/services/packages.ts` (single source of truth — bắt buộc đọc từ đây):
+- `PACKAGES` (danh sách đầy đủ: type, label, price, duration, description, originalPrice, features, recommended)
+- `getPackageByType(type)` — O(1) lookup
+- `getPackagePrice(type)` — throw nếu type lạ
+
+Legacy aliases (backward compat) tại `vietqr.service.ts`: `PACKAGE_PRICES`, `PACKAGE_DURATIONS`, `PACKAGE_LABELS` — tự động derive từ `PACKAGES` qua `Object.fromEntries`.
 
 ---
 
@@ -148,9 +150,11 @@ orderCode = <PREFIX><RANDOM_NUMBER>
 
 | packageType | Label | Prefix | Ví dụ orderCode |
 |---|---|---|---|
-| `MONTHLY` | Gói 1 Tháng | `DAY` | `DAY67619637` |
-| `6_MONTH` | Gói 6 Tháng | `MONTH` | `MONTH67619637` |
-| `YEAR` | Gói 1 Năm | `YEAR` | `YEAR67619637` |
+| `MONTHLY` | Gói 1 Tháng | `DAY` | `DAY4827163` |
+| `6_MONTH` | Gói 6 Tháng | `MONTH` | `MONTH3948215` |
+| `YEAR` | Gói 1 Năm | `YEAR` | `YEAR7293816` |
+
+Phần random = số nguyên **7 chữ số** (cập nhật 2026-06-17, cân bằng uniqueness vs. dễ đọc trên biên lai).
 
 Prefix gắn với `packageType` (KHÔNG random) → admin dễ phân loại doanh
 thu theo từng nhóm gói khi đối soát trên SePay dashboard.
@@ -454,6 +458,33 @@ CREATE TABLE "payment_code_patterns" (
 CREATE INDEX "payment_code_patterns_active_idx"
   ON "payment_code_patterns" USING btree ("is_active");
 ```
+
+### 2026-06-17: Gom packages vào single source of truth + fix FALLBACK_PATTERN_CODE
+
+**Vấn đề gốc**:
+1. Mỗi file UI (premium-payment-form, account-client, home-client) tự hardcode
+   mảng `PACKAGES` riêng → sửa giá 1 chỗ, các chỗ khác vẫn giá cũ.
+2. `FALLBACK_PATTERN_CODE = "ENG"` (3 ký tự) thay vì `"ENGPRM"` (6 ký tự) —
+   khi DB lỗi, mã sinh ra `ENGxxxxxxx` không match regex fallback
+   `ENGPRM[0-9]{7}` → webhook SePay không parse được → đơn treo PENDING mãi.
+3. `home-client.tsx` (landing page) hiển thị gói 6 tháng = 249k (sai giá).
+
+**Đã fix**:
+- **Tạo `packages.ts`**: single source of truth cho `type, label, price,
+  duration, description, originalPrice, features, recommended`. Hai helper
+  `getPackageByType()` (O(1)) và `getPackagePrice()` (throw nếu type lạ).
+- **Refactor 3 file UI** (`premium-payment-form.tsx`, `account-client.tsx`,
+  `home-client.tsx`): bỏ hardcode, import từ `packages.ts`. Tách
+  `PackageRow`/`AccountPackageCard` thành component riêng để clean.
+- **`payment-qr-card.tsx`**: thêm banner "Gói đã chọn" ở đầu thẻ QR
+  (lấy từ `order.packageLabel`) — user biết mình đang mua gói nào khi quét.
+- **`order.service.ts`**: dùng `getPackageByType()` thay vì
+  `PACKAGE_PRICES[packageType]` để thêm lớp validate.
+- **`vietqr.service.ts`**: giữ alias `PACKAGE_PRICES/LABELS/DURATIONS`
+  (backward compat) nhưng derive tự động từ `PACKAGES`. Fix lại
+  `FALLBACK_PATTERN_CODE = "ENGPRM"` (bị cắt ngắn trước đó thành "ENG").
+- **Random length**: 8 → 7 chữ số (theo user chọn).
+- **Cập nhật context docs** để khớp với single source of truth mới.
 
 ---
 

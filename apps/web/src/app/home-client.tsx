@@ -234,7 +234,7 @@ export default function HomeClient() {
                   <div className="space-y-2">
                     <h3 className="text-xl font-bold text-primary">Gói 6 Tháng</h3>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-extrabold text-primary">249.000đ</span>
+                      <span className="text-4xl font-extrabold text-primary">269.000đ</span>
                       <span className="text-sm text-muted-foreground">/ 6 tháng</span>
                     </div>
                   </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, CreditCard } from "lucide-react";
+import { Check, Copy, CreditCard, Crown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { OrderSummary } from "../types/schemas";
@@ -31,6 +31,26 @@ export function PaymentQrCard({ order }: PaymentQrCardProps) {
     <Card className="overflow-hidden border-slate-200/80 bg-white">
       <div className="bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-6">
         <div className="mx-auto max-w-sm space-y-4">
+          {/* Package info — quan trọng: user cần thấy mình đang mua gói nào */}
+          <div className="flex items-center gap-3 rounded-xl border border-indigo-200/60 bg-white px-4 py-3 shadow-sm">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white">
+              <Crown className="size-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-indigo-600">
+                Gói đã chọn
+              </p>
+              <p className="text-base font-bold text-slate-900 truncate">
+                {order.packageLabel}
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-base font-extrabold text-indigo-600">
+                {formatPrice(order.amount)}
+              </p>
+            </div>
+          </div>
+
           {/* QR Code */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50">
@@ -57,12 +77,7 @@ export function PaymentQrCard({ order }: PaymentQrCardProps) {
               mono
             />
             <DetailRow
-              label="Số tiền"
-              value={formatPrice(order.amount)}
-              accent
-            />
-            <DetailRow
-              label="Nội dung CK"
+              label="Mã thanh toán"
               value={order.orderCode}
               mono
               actions={

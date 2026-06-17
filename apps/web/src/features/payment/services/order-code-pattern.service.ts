@@ -14,10 +14,14 @@ export interface PaymentCodePattern {
 
 export interface GenerateOrderCodeOptions {
   /**
-   * Nếu truyền → chỉ generate theo pattern này.
-   * Nếu không truyền → random chọn 1 trong các pattern active.
+   * Pattern code CỤ THỂ dùng để sinh orderCode (vd: "DAY", "MONTH", "YEAR").
+   *
+   * Bắt buộc — không còn chế độ random. Caller (vietqr.service) quyết định
+   * pattern dựa trên `packageType` của đơn hàng → orderCode phản ánh đúng
+   * loại gói mà học viên đăng ký, giúp admin phân loại doanh thu khi đối soát
+   * trên SePay dashboard.
    */
-  preferredCode?: string;
+  preferredCode: string;
 }
 
 // ─── In-memory cache ─────────────────────────────────────────────────────────
@@ -78,16 +82,19 @@ export function isValidPatternCode(code: string): boolean {
 // ─── Generate ────────────────────────────────────────────────────────────────
 
 /**
- * Sinh orderCode mới theo 1 trong các pattern active.
+ * Sinh orderCode mới theo pattern CỤ THỂ (không random).
  *
- * Ví dụ: với pattern { code: "ENGPRM", randomLength: 8 } → "ENGPRMAB12CD34".
- *        với pattern { code: "DAY", randomLength: 6 }    → "DAY3K9P2M".
+ * Ví dụ: với pattern { code: "DAY", randomLength: 8 } → "DAY67619637".
+ *        với pattern { code: "MONTH", randomLength: 8 } → "MONTH67619637".
  *
- * Nếu `preferredCode` được truyền → ép buộc dùng pattern đó (còn active).
- * Nếu không có pattern active nào → throw error (DB chưa seed).
+ * Caller (vietqr.service) phải truyền `preferredCode` dựa trên packageType
+ * của đơn hàng (xem PACKAGE_PATTERN_CODE). Pattern phải còn active trong DB.
+ *
+ * Nếu `preferredCode` không match pattern nào active → throw error
+ * (DB chưa seed pattern đó, hoặc pattern bị admin soft-delete).
  */
 export async function generateOrderCode(
-  options: GenerateOrderCodeOptions = {},
+  options: GenerateOrderCodeOptions,
 ): Promise<string> {
   const patterns = await getActivePatterns();
   if (patterns.length === 0) {
@@ -96,16 +103,13 @@ export async function generateOrderCode(
     );
   }
 
-  let pattern: PaymentCodePattern | undefined;
-  if (options.preferredCode) {
-    const wanted = options.preferredCode.toUpperCase();
-    pattern = patterns.find((p) => p.code === wanted);
-    if (!pattern) {
-      throw new Error(`Pattern "${wanted}" not found or inactive.`);
-    }
-  } else {
-    // Pick ngẫu nhiên để phân tán orderCode (tránh 1 pattern bị spam).
-    pattern = patterns[Math.floor(Math.random() * patterns.length)]!;
+  const wanted = options.preferredCode.toUpperCase();
+  const pattern = patterns.find((p) => p.code === wanted);
+  if (!pattern) {
+    throw new Error(
+      `Pattern "${wanted}" not found or inactive. ` +
+        `Active patterns: ${patterns.map((p) => p.code).join(", ")}`,
+    );
   }
 
   return buildOrderCodeFromPattern(pattern);

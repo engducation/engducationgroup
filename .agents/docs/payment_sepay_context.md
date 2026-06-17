@@ -143,7 +143,17 @@ orderCode = <PREFIX><RANDOM_NUMBER>
 - **RANDOM_NUMBER** = số nguyên 8 chữ số, sinh bằng `crypto.randomInt`,
   dải `[10^7, 10^8)`. Không bắt đầu bằng số 0.
 
-**Ví dụ**: `DAY41354382`, `MONTH23889028`, `YEAR16596206`
+**Mapping gói học → prefix** (single source of truth tại
+`vietqr.service.ts → PACKAGE_PATTERN_CODE`):
+
+| packageType | Label | Prefix | Ví dụ orderCode |
+|---|---|---|---|
+| `MONTHLY` | Gói 1 Tháng | `DAY` | `DAY67619637` |
+| `6_MONTH` | Gói 6 Tháng | `MONTH` | `MONTH67619637` |
+| `YEAR` | Gói 1 Năm | `YEAR` | `YEAR67619637` |
+
+Prefix gắn với `packageType` (KHÔNG random) → admin dễ phân loại doanh
+thu theo từng nhóm gói khi đối soát trên SePay dashboard.
 
 ### 3.2. Tại sao lưu trong DB thay vì env?
 
@@ -156,14 +166,18 @@ orderCode = <PREFIX><RANDOM_NUMBER>
 - **Schema**: `src/db/schema/payment.ts` → `paymentCodePatterns`
 - **Service chính**: `src/features/payment/services/order-code-pattern.service.ts`
   - `getActivePatterns()` — query DB, cache 60s ở module scope
-  - `generateOrderCode({ preferredCode? })` — random chọn 1 pattern
+  - `generateOrderCode({ preferredCode })` — `preferredCode` BẮT BUỘC
+    (mapping từ `packageType`); throw nếu pattern không active
   - `buildOrderCodeFromPattern(pattern)` — sync, dùng `crypto.randomInt`
   - `parseOrderCodeFromContent(content)` — match theo tất cả pattern,
     có word-boundary (tránh match nhầm `DAY` trong `MONDAY`)
   - `isValidPatternCode(code)` — validate `^[A-Z0-9]{3,10}$`
   - `invalidatePatternCache()` — gọi sau CRUD
 - **Wrapper async**: `src/features/payment/services/vietqr.service.ts`
-  - `generateOrderCode()` — async, fallback `ENGPRMxxxxxxxx` nếu DB rỗng
+  - `PACKAGE_PATTERN_CODE: Record<PackageType, string>` — map
+    `MONTHLY→DAY`, `6_MONTH→MONTH`, `YEAR→YEAR`
+  - `generateOrderCode(packageType)` — async, gọi DB layer với pattern
+    tương ứng, fallback `ENGPRMxxxxxxxx` nếu DB lỗi / pattern inactive
   - `parseOrderCodeFromContent()` — async, fallback regex `ENGPRM[0-9]{8}`
 - **SePay config trong dashboard**: thêm 3 dòng `DAY`, `MONTH`, `YEAR`
   (mỗi dòng là 1 mã SePay nhận diện).
@@ -173,6 +187,16 @@ orderCode = <PREFIX><RANDOM_NUMBER>
 ⚠️ **BẮT BUỘC** vào my.sepay.vn → Cài đặt → Mã thanh toán thêm 3 dòng:
 `DAY`, `MONTH`, `YEAR`. Nếu không SePay sẽ **không gửi webhook** cho giao
 dịch có nội dung bắt đầu bằng 3 mã này → đơn hàng treo PENDING mãi mãi.
+
+⚠️ **Mapping packageType → prefix CỐ ĐỊNH** tại
+`vietqr.service.ts → PACKAGE_PATTERN_CODE`. KHÔNG random pattern nữa:
+- `MONTHLY` → `DAY`
+- `6_MONTH` → `MONTH`
+- `YEAR` → `YEAR`
+
+Nếu thêm/sửa pattern mới trong DB, **đồng thời update map này** — nếu
+không hàm `generateOrderCode(packageType)` sẽ throw vì không tìm thấy
+pattern tương ứng active trong DB.
 
 ---
 
@@ -392,6 +416,27 @@ Khi detect `PENDING → SUCCESS`:
 - **Bỏ config**: `crons` trong `vercel.json`, `CRON_SECRET` trong env.
 - **Kết quả**: hết hạn được phát hiện trong vòng 3 giây (một chu kỳ
   polling) thay vì tệ nhất 5 phút.
+
+### 2026-06-17: Gắn prefix SePay với packageType
+
+**Vấn đề**:
+1. `generateOrderCode` cũ random 1 trong 3 pattern active → admin không
+   thể phân loại doanh thu theo nhóm gói khi nhìn orderCode.
+2. Một order `MONTHLY` có thể mang prefix `YEAR` (và ngược lại) — sai
+   semantic.
+
+**Đã fix**:
+- **Thêm map** `PACKAGE_PATTERN_CODE` trong `vietqr.service.ts`:
+  `MONTHLY → DAY`, `6_MONTH → MONTH`, `YEAR → YEAR`.
+- **`generateOrderCode(packageType)`** giờ nhận `packageType` bắt buộc,
+  lookup pattern tương ứng trong map rồi sinh mã. Bỏ hẳn chế độ random.
+- **`order-code-pattern.service.ts → generateOrderCode`** ép `preferredCode`
+  bắt buộc, throw error nếu pattern tương ứng không active trong DB.
+- **Cập nhật test script** `test-patterns.ts` để test đúng cách mới.
+- **`parseOrderCodeFromContent`** KHÔNG đổi — vẫn match theo pattern
+  active trong DB, SePay dashboard đã có đủ 3 dòng `DAY/MONTH/YEAR` nên
+  forward-compat ổn.
+- **Kết quả**: orderCode phản ánh đúng gói, admin đối soát dễ.
 
 ### Migration
 

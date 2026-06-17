@@ -4,6 +4,7 @@ import {
   generateOrderCode as generateOrderCodeFromDb,
   parseOrderCodeFromContent as parseOrderCodeFromContentFromDb,
 } from "./order-code-pattern.service";
+import type { PackageType } from "@/db/schema";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 // Fallback prefix khi bảng `payment_code_patterns` chưa được seed (dev mới
@@ -39,20 +40,55 @@ export const PACKAGE_PRICES: Record<string, number> = {
   YEAR: 499000,
 };
 
+// ─── Order Code Prefix theo packageType ─────────────────────────────────────
+//
+// Mapping cố định giữa gói học và prefix SePay. Mỗi gói sinh mã có prefix
+// riêng để Admin dễ phân loại doanh thu khi đối soát trên SePay dashboard.
+//
+// Quy tắc:
+//   - MONTHLY  → "DAY"     (gói 1 tháng — đánh dấu "mua theo kỳ ngắn")
+//   - 6_MONTH  → "MONTH"   (gói 6 tháng)
+//   - YEAR     → "YEAR"    (gói 1 năm)
+//
+// BẮT BUỘC phải khớp với các dòng đã khai báo trong SePay dashboard
+// (my.sepay.vn → Cài đặt → Mã thanh toán). Nếu thiếu 1 dòng ở SePay
+// dashboard, SePay sẽ bỏ qua giao dịch có prefix đó → đơn treo PENDING mãi.
+//
+// Pattern code PHẢI còn active trong bảng `payment_code_patterns`. Nếu admin
+// soft-delete 1 pattern, cần update map này trước hoặc tạo lại pattern.
+export const PACKAGE_PATTERN_CODE: Record<PackageType, string> = {
+  MONTHLY: "DAY",
+  "6_MONTH": "MONTH",
+  YEAR: "YEAR",
+};
+
 // ─── Order Code Generation ──────────────────────────────────────────────────
 
 /**
- * Sinh orderCode mới. ƯU TIÊN dùng các pattern active từ DB
- * (`payment_code_patterns`). Nếu DB rỗng (chưa seed) → fallback về
- * prefix "ENGPRM" + 8 ký tự random để app vẫn chạy được khi setup.
+ * Sinh orderCode mới dựa trên packageType của đơn hàng.
+ *
+ * Mapping: dùng `PACKAGE_PATTERN_CODE` để chọn pattern tương ứng với gói
+ * (MONTHLY→DAY, 6_MONTH→MONTH, YEAR→YEAR). Sau đó query DB lấy pattern
+ * detail (randomLength) và sinh mã.
+ *
+ * Ví dụ:
+ *   generateOrderCode("MONTHLY") → "DAY67619637"
+ *   generateOrderCode("6_MONTH") → "MONTH23889028"
+ *   generateOrderCode("YEAR")   → "YEAR16596206"
+ *
+ * Nếu pattern tương ứng không active trong DB → throw error. Nếu DB lỗi /
+ * chưa seed → fallback về "ENGPRMxxxxxxxx" để app không crash (giữ backward
+ * compat cho môi trường dev chưa setup).
  */
-export async function generateOrderCode(): Promise<string> {
+export async function generateOrderCode(packageType: PackageType): Promise<string> {
+  const patternCode = PACKAGE_PATTERN_CODE[packageType];
   try {
-    return await generateOrderCodeFromDb();
+    return await generateOrderCodeFromDb({ preferredCode: patternCode });
   } catch (err) {
-    // DB chưa seed / lỗi kết nối → dùng fallback để app không crash.
+    // DB chưa seed / pattern bị inactive / lỗi kết nối → dùng fallback để
+    // app không crash. Log warning để admin biết cần seed pattern.
     console.warn(
-      "[vietqr.service] generateOrderCode fell back to ENGPRM prefix:",
+      `[vietqr.service] generateOrderCode(${packageType}) fell back to ${FALLBACK_PATTERN_CODE} prefix:`,
       err instanceof Error ? err.message : err,
     );
     return buildFallbackOrderCode();

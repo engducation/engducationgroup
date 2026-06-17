@@ -72,7 +72,7 @@ export async function createSepayOrder(
   }
 
   const id = `ord_${nanoid(14)}`;
-  const orderCode = await generateOrderCode();
+  const orderCode = await generateOrderCode(input.packageType);
   const expiresAt = expiresAtFromNow();
 
   const [inserted] = await db
@@ -203,6 +203,29 @@ export async function markOrderExpiredIfDue(
       ),
     )
     .returning({ id: orders.id, status: orders.status, expiresAt: orders.expiresAt });
+
+  return updated ?? null;
+}
+
+// ─── Cancel Order (user-initiated) ───────────────────────────────────────────
+//
+// Student tự hủy đơn PENDING từ UI. Hành vi giống `markOrderExpiredIfDue`
+// (set EXPIRED + idempotent nhờ `status = PENDING` trong WHERE) nhưng:
+//   - KHÔNG check `expiresAt` (cho phép hủy sớm, không phải đợi hết 15 phút)
+//   - Có ownership check ở route layer; ở đây chỉ enforce status transition
+//
+// Trả về bản ghi mới nếu cancel thành công, `null` nếu order không còn
+// PENDING (đã SUCCESS / EXPIRED / FAILED — không cần làm gì).
+export async function cancelOrder(
+  orderId: string,
+): Promise<{ id: string; status: string } | null> {
+  const [updated] = await db
+    .update(orders)
+    .set({ status: "EXPIRED" as OrderStatus, updatedAt: new Date() })
+    .where(
+      and(eq(orders.id, orderId), eq(orders.status, "PENDING" as OrderStatus)),
+    )
+    .returning({ id: orders.id, status: orders.status });
 
   return updated ?? null;
 }

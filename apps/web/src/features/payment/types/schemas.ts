@@ -81,6 +81,7 @@ export type SimulateWebhookInput = z.infer<typeof simulateWebhookSchema>;
 
 export type WebhookProcessResult =
   | { kind: "ok"; orderId: string; alreadyProcessed: boolean }
+  | { kind: "ip_not_allowed"; clientIp: string }
   | { kind: "signature_invalid" }
   | { kind: "order_not_found"; orderCode: string }
   | { kind: "order_already_settled"; orderId: string }

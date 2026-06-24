@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, Copy, CreditCard, Crown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { formatOrderCodeForDisplay } from "@/features/payment/utils/order-code.utils";
 import type { OrderSummary } from "../types/schemas";
 
 interface PaymentQrCardProps {
@@ -19,6 +20,7 @@ export function PaymentQrCard({ order }: PaymentQrCardProps) {
 
   const copyOrderCode = async () => {
     try {
+      // Copy raw orderCode (without formatting spaces)
       await navigator.clipboard.writeText(order.orderCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -78,8 +80,9 @@ export function PaymentQrCard({ order }: PaymentQrCardProps) {
             />
             <DetailRow
               label="Mã thanh toán"
-              value={order.orderCode}
+              value={formatOrderCodeForDisplay(order.orderCode)}
               mono
+              accent
               actions={
                 <Button
                   type="button"

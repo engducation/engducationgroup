@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import { db } from "@/db";
 import { env } from "@/env";
 import {
@@ -22,45 +22,139 @@ import {
 import { grantSubscriptionInTx, type DbTx } from "./subscription.service";
 import { parseOrderCodeFromContent } from "./vietqr.service";
 
-// ─── HMAC Signature Verification ────────────────────────────────────────────
+// ─── Authentication: IP Whitelist + API Key ──────────────────────────────────
+//
+// Theo docs SePay chính thức (developer.sepay.vn/vi/dia-chi-ip), SePay khuyến nghị
+// kết hợp IP whitelist + API Key để có 2 lớp bảo mật.
+//   - IP whitelist: chặn request không phải từ SePay (defense in depth).
+//   - API Key: chặn trường hợp SePay đổi IP trong tương lai.
+//
+// Qua proxy (ngrok, Vercel, Cloudflare, Nginx...), IP thật của SePay chỉ có
+// trong header `x-forwarded-for` do proxy thêm vào. Không bao giờ đọc
+// `request.ip` trực tiếp vì sẽ trả về IP của proxy edge.
 
-const SEPAY_SIGNATURE_HEADERS = [
-  "x-sepay-signature",
-  "x-sepay-webhook-signature",
-  "sepay-signature",
-] as const;
+// Danh sách IP chính thức từ SePay docs (developer.sepay.vn/vi/dia-chi-ip).
+// Bao gồm cả IPv4 + IPv6. So sánh exact match (Set lookup O(1)).
+const SEPAY_IPS: ReadonlySet<string> = new Set([
+  // IPv4 — các IP lẻ không thuộc subnet rotate
+  "172.236.138.20",
+  "172.233.83.68",
+  "171.244.35.2",
+  "151.158.108.68",
+  "151.158.109.79",
+  "103.255.238.139",
+  // IPv6
+  "2400:8905::2000:8cff:fe98:45cd",
+  "2600:3c15::2000:8aff:fedd:874b",
+]);
 
-export function getSignatureFromHeaders(headers: Headers): string | null {
-  for (const name of SEPAY_SIGNATURE_HEADERS) {
-    const value = headers.get(name);
-    if (value) return value.trim();
+// IPv4 CIDR ranges — dải SePay dùng để rotate webhook.
+// Logs thật từ production cho thấy 103.255.238.0/24 xuất hiện nhiều IP khác nhau
+// (.96, .97, .98... không chỉ .139 như docs công bố). Khi SePay công bố subnet
+// mới, append vào đây. Cập nhật tại https://developer.sepay.vn/vi/dia-chi-ip.
+const SEPAY_IPV4_CIDRS: readonly string[] = [
+  "103.255.238.0/24",
+];
+
+/**
+ * Convert IPv4 string (vd: "103.255.238.96") thành 32-bit number.
+ * Trả về null nếu không phải IPv4 hợp lệ (IPv6 dùng exact match ở Set).
+ */
+function ipv4ToInt(ip: string): number | null {
+  const parts = ip.split(".");
+  if (parts.length !== 4) return null;
+  let result = 0;
+  for (const part of parts) {
+    if (!/^\d+$/.test(part)) return null;
+    const n = Number(part);
+    if (n < 0 || n > 255) return null;
+    result = (result << 8) + n;
+  }
+  return result >>> 0;
+}
+
+/**
+ * Check IPv4 có nằm trong CIDR (vd: "103.255.238.0/24") hay không.
+ * Hỗ trợ /0 → /32. Không hỗ trợ IPv6 (CIDR khác format).
+ */
+function ipv4MatchesCidr(ip: string, cidr: string): boolean {
+  const [base, prefixStr] = cidr.split("/");
+  const prefix = Number(prefixStr);
+  if (!base || Number.isNaN(prefix) || prefix < 0 || prefix > 32) return false;
+  const ipInt = ipv4ToInt(ip);
+  const baseInt = ipv4ToInt(base);
+  if (ipInt === null || baseInt === null) return false;
+  if (prefix === 0) return true;
+  // Mask giữ lại `prefix` bit cao, so sánh phần còn lại phải = 0.
+  const mask = (~((1 << (32 - prefix)) - 1)) >>> 0;
+  return (ipInt & mask) === (baseInt & mask);
+}
+
+/**
+ * Lấy IP thật của caller, ưu tiên `x-forwarded-for` (vì qua proxy/CDN/ngrok).
+ *
+ * Chain:
+ *   1. `x-forwarded-for` (phần tử đầu = IP gốc của client, split comma + trim)
+ *   2. `x-real-ip` (Nginx style)
+ *
+ * Lưu ý: nhiều proxy gửi IPv4 dưới dạng IPv6 mapped (`::ffff:172.236.138.20`)
+ * — Node/Next.js có thể tự normalize, nhưng qua 2 lớp proxy thì header có thể
+ * giữ nguyên prefix. Hàm này strip prefix để so khớp với `SEPAY_IPS`.
+ *
+ * KHÔNG dùng `request.ip` vì qua proxy sẽ trả IP proxy edge.
+ */
+export function getClientIpFromHeaders(headers: Headers): string {
+  const forwardedFor = headers.get("x-forwarded-for");
+
+  if (forwardedFor) {
+    // Lấy IP đầu tiên trong chuỗi (IP gốc) và trim khoảng trắng.
+    const firstIp = forwardedFor.split(",")[0]?.trim();
+    if (firstIp) {
+      // Strip IPv6 mapped IPv4 prefix (vd: "::ffff:172.236.138.20" → "172.236.138.20")
+      if (firstIp.startsWith("::ffff:")) {
+        return firstIp.replace("::ffff:", "");
+      }
+      return firstIp;
+    }
+  }
+
+  const realIp = headers.get("x-real-ip");
+  return realIp ? realIp.trim() : "";
+}
+
+/**
+ * Check IP có thuộc whitelist SePay không.
+ * - IPv4: exact match Set HOẶC nằm trong bất kỳ CIDR range nào ở `SEPAY_IPV4_CIDRS`.
+ * - IPv6: chỉ exact match ở Set (CIDR IPv6 không dùng ở đây).
+ */
+export function isSepayIp(ip: string): boolean {
+  if (!ip) return false;
+  if (SEPAY_IPS.has(ip)) return true;
+  // CIDR ranges chỉ áp dụng cho IPv4 (chứa dấu `.`, không có `:`).
+  if (ip.includes(":")) return false;
+  return SEPAY_IPV4_CIDRS.some((cidr) => ipv4MatchesCidr(ip, cidr));
+}
+
+// ─── API Key Authentication ───────────────────────────────────────────────
+//
+// Theo docs developer.sepay.vn/vi/xac-thuc, SePay gửi header `Authorization: Apikey <key>`.
+
+export function getApiKeyFromHeaders(headers: Headers): string | null {
+  const auth = headers.get("authorization");
+  if (auth) {
+    const match = auth.match(/^Apikey\s+(.+)$/i);
+    if (match) return match[1]!;
   }
   return null;
 }
 
-export function computeHmacSignature(rawBody: string, secret: string): string {
-  return createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
-}
-
-export function verifyHmacSignature(
-  rawBody: string,
-  providedSignature: string | null,
-  secret: string = env.SEPAY_WEBHOOK_SECRET,
-): boolean {
-  if (!providedSignature) return false;
-  const expected = computeHmacSignature(rawBody, secret);
-
-  const provided = providedSignature.startsWith("sha256=")
-    ? providedSignature.slice("sha256=".length)
-    : providedSignature;
-
-  if (expected.length !== provided.length) return false;
-
-  try {
-    return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(provided, "hex"));
-  } catch {
-    return false;
-  }
+export function verifyApiKey(providedKey: string | null): boolean {
+  if (!providedKey || !env.SEPAY_API_KEY) return false;
+  const a = Buffer.from(env.SEPAY_API_KEY);
+  const b = Buffer.from(providedKey);
+  // timingSafeEqual yêu cầu cùng byte length, nếu khác → fail an toàn (tránh throw).
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }
 
 // ─── Payload Parsing ────────────────────────────────────────────────────────
@@ -172,14 +266,29 @@ export async function settleOrderInDb(
 
 export interface ProcessSepayWebhookInput {
   rawBody: string;
-  signature: string | null;
+  apiKey: string | null;
+  /**
+   * IP thật của caller (đã parse từ x-forwarded-for tại route layer).
+   * Dùng để check whitelist SePay. Mặc định "" (route layer luôn truyền).
+   */
+  clientIp?: string;
+  /** Bypass mọi check auth (chỉ dùng khi `?test=true` tại route). */
+  bypassAuth?: boolean;
 }
 
 export async function processSepayWebhook(
   input: ProcessSepayWebhookInput,
 ): Promise<WebhookProcessResult> {
-  // Bước 1: HMAC Validation
-  if (!verifyHmacSignature(input.rawBody, input.signature)) {
+  // Lớp 1: IP Whitelist (theo docs developer.sepay.vn/vi/dia-chi-ip).
+  // Chặn request không phải từ SePay edge. Qua proxy (ngrok, Vercel...), IP
+  // thật của SePay chỉ có trong x-forwarded-for — route layer parse rồi truyền vào.
+  if (!input.bypassAuth && !isSepayIp(input.clientIp ?? "")) {
+    return { kind: "ip_not_allowed", clientIp: input.clientIp ?? "" };
+  }
+
+  // Lớp 2: API Key Authentication (theo docs developer.sepay.vn/vi/xac-thuc).
+  // Chặn trường hợp SePay đổi IP — danh sách IP có thể được SePay update.
+  if (!input.bypassAuth && !verifyApiKey(input.apiKey)) {
     return { kind: "signature_invalid" };
   }
 

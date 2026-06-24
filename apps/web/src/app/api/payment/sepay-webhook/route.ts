@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
-  getSignatureFromHeaders,
+  getApiKeyFromHeaders,
+  getClientIpFromHeaders,
   processSepayWebhook,
 } from "@/features/payment/services/sepay-webhook.service";
 
@@ -12,48 +13,54 @@ export const maxDuration = 30;             // SePay timeout 30s
 //
 // Endpoint nhận tín hiệu biến động số dư từ SePay.
 //
-// Response contract (SePay yêu cầu):
-//   - Thành công: HTTP 200 + body {"success": true}
-//   - Signature invalid: HTTP 403 (SePay sẽ retry với backoff Fibonacci)
-//   - Payload invalid: HTTP 400
-//   - Lỗi server: HTTP 500 (SePay sẽ retry)
+// Auth (2 lớp theo khuyến nghị SePay docs developer.sepay.vn/vi/dia-chi-ip):
+//   - Lớp 1 (IP Whitelist): exact match cả IPv4 + IPv6, đọc từ x-forwarded-for
+//                            (vì qua ngrok/Vercel/Cloudflare IP thật chỉ có ở header).
+//   - Lớp 2 (API Key):      `Authorization: Apikey <key>`
 //
-// KHÔNG đăng nhập chi tiết khi signature sai (PAYMENT_SYSTEM.md §4 Bước 1:
-// chống log spam → DDoS).
-export async function POST(request: Request) {
-  // Đọc raw body TRƯỚC (PHẢI dùng request.text() để giữ nguyên chuỗi cho HMAC).
-  const rawBody = await request.text();
-  const signature = getSignatureFromHeaders(request.headers);
+// Manual test mode: `?test=true` bypass cả 2 lớp auth (chỉ dev).
 
-  const result = await processSepayWebhook({ rawBody, signature });
+export async function POST(request: Request) {
+  const rawBody = await request.text();
+
+  // Manual test mode: ?test=true bypass IP + API key check (chỉ dev).
+  // Production tuyệt đối không có query này.
+  const url = new URL(request.url);
+  const isManualTest = url.searchParams.get("test") === "true";
+
+  const clientIp = getClientIpFromHeaders(request.headers);
+  const apiKey = getApiKeyFromHeaders(request.headers);
+
+  const result = await processSepayWebhook({
+    rawBody,
+    apiKey,
+    clientIp,
+    bypassAuth: isManualTest,
+  });
 
   switch (result.kind) {
     case "ok":
-      // Kể cả đã xử lý trước đó, vẫn trả success để SePay không retry.
       return NextResponse.json({ success: true });
 
+    case "ip_not_allowed":
+      console.warn("SePay webhook: IP not in whitelist", {
+        clientIp: result.clientIp,
+        forwardedFor: request.headers.get("x-forwarded-for"),
+        realIp: request.headers.get("x-real-ip"),
+      });
+      return NextResponse.json({ success: false, error: "Forbidden: Invalid IP Source" }, { status: 403 });
+
     case "signature_invalid":
-      return NextResponse.json(
-        { success: false, error: "Invalid signature" },
-        { status: 403 },
-      );
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
 
     case "invalid_payload":
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 400 },
-      );
+      return NextResponse.json({ success: false, error: result.error }, { status: 400 });
 
     case "order_not_found":
-      // 200 để SePay không retry, nhưng log để admin biết có giao dịch không match.
-      console.warn(
-        "SePay webhook: order not found for code",
-        result.orderCode,
-      );
+      console.warn("SePay webhook: order not found for code", result.orderCode);
       return NextResponse.json({ success: true });
 
     case "order_already_settled":
-      // Order đã SUCCESS/FAILED/EXPIRED → idempotent success.
       return NextResponse.json({ success: true });
 
     case "amount_mismatch":
@@ -68,15 +75,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
 
     case "order_expired":
-      // Order đã quá hạn nhưng SePay vẫn gửi CK. Đã mark EXPIRED ở service.
-      // Log để admin biết có thể là lỗi cron hoặc CK đến muộn.
-      console.warn(
-        "SePay webhook: order expired, payment received after expiry",
-        {
-          orderId: result.orderId,
-          expiredAt: result.expiredAt,
-        },
-      );
+      console.warn("SePay webhook: order expired, payment received after expiry", {
+        orderId: result.orderId,
+        expiredAt: result.expiredAt,
+      });
       return NextResponse.json({ success: true });
   }
 }

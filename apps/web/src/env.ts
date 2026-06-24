@@ -14,7 +14,8 @@ export const env = createEnv({
     CLOUDINARY_UPLOAD_PRESET: z.string().min(1),
     GROQ_API_KEY: z.string().min(1).optional(),
     // ─── SePay payment integration ────────────────────────────────────────
-    SEPAY_WEBHOOK_SECRET: z.string().min(16),
+    SEPAY_API_KEY: z.string().min(16),
+    SEPAY_WEBHOOK_SECRET: z.string().min(16).optional(),
     SEPAY_BANK_ACCOUNT: z.string().min(6),
     SEPAY_BANK_CODE: z.string().min(2),
     SEPAY_ACCOUNT_NAME: z.string().min(2),
@@ -39,6 +40,7 @@ export const env = createEnv({
     CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
     CLOUDINARY_UPLOAD_PRESET: process.env.CLOUDINARY_UPLOAD_PRESET,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
+    SEPAY_API_KEY: process.env.SEPAY_API_KEY,
     SEPAY_WEBHOOK_SECRET: process.env.SEPAY_WEBHOOK_SECRET,
     SEPAY_BANK_ACCOUNT: process.env.SEPAY_BANK_ACCOUNT,
     SEPAY_BANK_CODE: process.env.SEPAY_BANK_CODE,

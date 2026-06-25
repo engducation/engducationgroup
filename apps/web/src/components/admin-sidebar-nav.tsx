@@ -11,6 +11,7 @@ import {
   PencilLine,
   ReceiptText,
   Settings,
+  Tag,
   Users,
 } from "lucide-react";
 
@@ -28,6 +29,11 @@ const navItems: Array<{
     label: "Khóa học",
     href: "/admin/courses",
     icon: BookOpen,
+  },
+  {
+    label: "Giá & Giảm giá",
+    href: "/admin/pricing",
+    icon: Tag,
   },
   {
     label: "AI Prompts",

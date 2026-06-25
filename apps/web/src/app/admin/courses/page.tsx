@@ -160,12 +160,12 @@ export default function AdminCoursesPage() {
         </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={
+          <DialogTrigger asChild>
             <Button className="bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200 shrink-0">
               <Plus className="size-4" />
               Tạo khóa học
             </Button>
-          } />
+          </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Tạo khóa học mới</DialogTitle>

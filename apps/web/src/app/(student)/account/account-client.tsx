@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -17,8 +17,8 @@ import {
   ChevronRight,
   User,
   Mail,
-  ArrowRight,
   UserCircle,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,8 +31,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useCreateOrder } from "@/features/payment/hooks/use-create-order";
-import { PACKAGES, type PackageInfo } from "@/features/payment/services/packages";
 import type { PackageType } from "@/features/payment/types/schemas";
+import { toast } from "sonner";
 
 interface AccountClientProps {
   user: {
@@ -45,6 +45,21 @@ interface AccountClientProps {
   };
   isPremium: boolean;
   daysRemaining: number;
+}
+
+interface DynamicPackage {
+  packageType: PackageType;
+  label: string;
+  description: string;
+  basePrice: number;
+  currentPrice: number;
+  originalPrice: number;
+  discountPercent: number;
+  isDiscounted: boolean;
+  discountEndsAt: string | null;
+  recommended: boolean;
+  duration: number;
+  features: string[];
 }
 
 function formatPrice(price: number) {
@@ -61,6 +76,38 @@ function formatDate(date: Date | string | null) {
   });
 }
 
+const PACKAGE_LABELS: Record<string, string> = {
+  MONTHLY: "Gói 1 Tháng",
+  "6_MONTH": "Gói 6 Tháng",
+  YEAR: "Gói 1 Năm",
+};
+
+const PACKAGE_DURATIONS: Record<string, number> = {
+  MONTHLY: 30,
+  "6_MONTH": 180,
+  YEAR: 365,
+};
+
+const DEFAULT_FEATURES: Record<string, string[]> = {
+  MONTHLY: [
+    "Học từ vựng theo danh mục",
+    "Làm quiz trắc nghiệm cơ bản",
+    "Xem video bài giảng (giới hạn)",
+  ],
+  "6_MONTH": [
+    "Tất cả tính năng gói cơ bản",
+    "Video bài giảng không giới hạn",
+    "Quiz nâng cao + giải thích chi tiết",
+    "AI Writing Assistant (50 lượt/tháng)",
+  ],
+  YEAR: [
+    "Tất cả tính năng Premium",
+    "AI Writing Assistant không giới hạn",
+    "Báo cáo phân tích AI hàng tháng",
+    "Hỗ trợ ưu tiên 24/7",
+  ],
+};
+
 export function AccountClient({
   user,
   isPremium,
@@ -68,18 +115,44 @@ export function AccountClient({
 }: AccountClientProps) {
   const router = useRouter();
   const [selectedPackage, setSelectedPackage] = useState<PackageType>("6_MONTH");
+  const [packages, setPackages] = useState<DynamicPackage[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(true);
   const { createOrder, isLoading } = useCreateOrder({
     onSuccess: (order) => {
       router.push(`/upgrade/${order.id}` as never);
     },
   });
 
+  const fetchPackages = useCallback(async () => {
+    try {
+      const res = await fetch("/api/pricing");
+      if (!res.ok) throw new Error("Failed to fetch pricing");
+      const data = await res.json();
+      setPackages(data);
+      
+      // Find recommended package and select it
+      const recommended = data.find((p: DynamicPackage) => p.recommended);
+      if (recommended) {
+        setSelectedPackage(recommended.packageType);
+      }
+    } catch (err) {
+      console.error("Error fetching pricing:", err);
+      toast.error("Không thể tải thông tin giá");
+    } finally {
+      setLoadingPackages(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchPackages();
+  }, [fetchPackages]);
+
   // Refresh subscription status periodically
   useEffect(() => {
     if (isPremium) {
       const interval = setInterval(() => {
         router.refresh();
-      }, 60000); // Refresh every minute
+      }, 60000);
       return () => clearInterval(interval);
     }
   }, [isPremium, router]);
@@ -88,10 +161,11 @@ export function AccountClient({
     try {
       await createOrder(selectedPackage);
     } catch (error) {
-      // Error already shown via hook state
       console.error("Order create error:", error);
     }
   };
+
+  const selectedPkg = packages.find((p) => p.packageType === selectedPackage);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -240,16 +314,22 @@ export function AccountClient({
           </div>
 
           {/* Package Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {PACKAGES.map((pkg) => (
-              <AccountPackageCard
-                key={pkg.type}
-                pkg={pkg}
-                selected={selectedPackage === pkg.type}
-                onSelect={setSelectedPackage}
-              />
-            ))}
-          </div>
+          {loadingPackages ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="size-8 animate-spin text-indigo-600" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {packages.map((pkg) => (
+                <AccountPackageCard
+                  key={pkg.packageType}
+                  pkg={pkg}
+                  selected={selectedPackage === pkg.packageType}
+                  onSelect={setSelectedPackage}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Payment Summary */}
           <Card>
@@ -264,31 +344,51 @@ export function AccountClient({
                 <div className="flex justify-between">
                   <span className="text-slate-500">Gói:</span>
                   <span className="font-semibold">
-                    {PACKAGES.find((p) => p.type === selectedPackage)?.label}
+                    {selectedPkg?.label || "..."}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Thời hạn:</span>
                   <span className="font-semibold">
-                    {PACKAGES.find((p) => p.type === selectedPackage)?.duration} ngày
+                    {selectedPkg?.duration || 0} ngày
                   </span>
                 </div>
               </div>
+
+              {selectedPkg?.isDiscounted && (
+                <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <Tag className="size-4 text-emerald-600" />
+                  <span className="text-sm text-emerald-700">
+                    Đang giảm giá {selectedPkg.discountPercent}%
+                  </span>
+                </div>
+              )}
 
               <Separator />
 
               <div className="flex items-center justify-between">
                 <span className="text-lg font-bold text-slate-900">Tổng thanh toán:</span>
-                <span className="text-2xl font-extrabold text-indigo-600">
-                  {formatPrice(
-                    PACKAGES.find((p) => p.type === selectedPackage)?.price || 0
+                <div className="text-right">
+                  {selectedPkg?.isDiscounted ? (
+                    <div className="space-y-1">
+                      <span className="text-2xl font-extrabold text-emerald-600">
+                        {formatPrice(selectedPkg.currentPrice)}
+                      </span>
+                      <span className="block text-sm text-slate-400 line-through">
+                        {formatPrice(selectedPkg.originalPrice)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-2xl font-extrabold text-indigo-600">
+                      {formatPrice(selectedPkg?.currentPrice || 0)}
+                    </span>
                   )}
-                </span>
+                </div>
               </div>
 
               <Button
                 onClick={handleUpgrade}
-                disabled={isLoading}
+                disabled={isLoading || loadingPackages}
                 className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold shadow-lg shadow-indigo-500/25 h-12 text-base"
               >
                 {isLoading ? (
@@ -380,7 +480,7 @@ export function AccountClient({
 }
 
 interface AccountPackageCardProps {
-  pkg: PackageInfo;
+  pkg: DynamicPackage;
   selected: boolean;
   onSelect: (type: PackageType) => void;
 }
@@ -389,7 +489,7 @@ function AccountPackageCard({ pkg, selected, onSelect }: AccountPackageCardProps
   return (
     <button
       type="button"
-      onClick={() => onSelect(pkg.type)}
+      onClick={() => onSelect(pkg.packageType)}
       className={`relative flex flex-col rounded-2xl border-2 p-5 text-left transition-all ${
         selected
           ? "border-indigo-500 bg-indigo-50/50 shadow-lg shadow-indigo-500/10"
@@ -402,19 +502,34 @@ function AccountPackageCard({ pkg, selected, onSelect }: AccountPackageCardProps
         </span>
       )}
 
+      {pkg.isDiscounted && !pkg.recommended && (
+        <span className="absolute -top-3 left-4 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+          -{pkg.discountPercent}%
+        </span>
+      )}
+
       <div className="space-y-3 flex-1">
         <div>
           <h3 className="font-bold text-slate-900">{pkg.label}</h3>
-          <div className="flex items-baseline gap-1 mt-1">
+          <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-extrabold text-slate-900">
-              {formatPrice(pkg.price)}
+              {formatPrice(pkg.currentPrice)}
             </span>
-            {pkg.originalPrice && (
+          </div>
+          {pkg.isDiscounted ? (
+            <div className="flex items-center gap-2 mt-1">
               <span className="text-sm text-slate-400 line-through">
                 {formatPrice(pkg.originalPrice)}
               </span>
-            )}
-          </div>
+              <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 text-xs">
+                -{pkg.discountPercent}%
+              </Badge>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500 mt-1">
+              {pkg.duration} ngày
+            </p>
+          )}
         </div>
 
         <p className="text-xs text-slate-500">{pkg.description}</p>

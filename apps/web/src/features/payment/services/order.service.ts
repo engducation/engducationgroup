@@ -9,7 +9,7 @@ import {
   PACKAGE_LABELS,
 } from "./vietqr.service";
 import { generatePaymentMemo } from "../utils/payment-memo.utils";
-import { getPackageByType } from "./packages";
+import { getPackagePriceInfo, type CalculatedPrice } from "./pricing.service";
 import type { OrderSummary, PackageType } from "../types/schemas";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -21,6 +21,7 @@ const MS_PER_MINUTE = 60 * 1000;
 export interface CreateSepayOrderInput {
   userId: string;
   packageType: PackageType;
+  voucherCode?: string;
 }
 
 export interface CreateSepayOrderResult {
@@ -45,13 +46,12 @@ function toOrderSummary(order: {
   createdAt: Date;
 }): OrderSummary {
   const packageType = order.packageType as PackageType;
-  const pkg = getPackageByType(packageType);
   return {
     id: order.id,
     orderCode: order.orderCode,
     paymentMemo: order.paymentMemo,
     packageType,
-    packageLabel: pkg?.label ?? PACKAGE_LABELS[packageType] ?? packageType,
+    packageLabel: PACKAGE_LABELS[packageType] ?? packageType,
     amount: order.amount,
     status: order.status as OrderSummary["status"],
     expiresAt: new Date(order.expiresAt).toISOString(),
@@ -73,12 +73,9 @@ function toOrderSummary(order: {
 export async function createSepayOrder(
   input: CreateSepayOrderInput,
 ): Promise<CreateSepayOrderResult> {
-  // Lấy giá từ packages.ts (single source of truth) — throw nếu type lạ.
-  const pkg = getPackageByType(input.packageType);
-  if (!pkg) {
-    throw new Error(`Invalid package type: ${input.packageType}`);
-  }
-  const amount = pkg.price;
+  // Lấy giá từ pricing.service.ts (dynamic pricing từ DB)
+  const pkgInfo = await getPackagePriceInfo(input.packageType);
+  const amount = pkgInfo.currentPrice;
 
   const id = `ord_${nanoid(14)}`;
   const orderCode = await generateOrderCode(input.packageType);

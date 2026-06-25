@@ -28,13 +28,16 @@ export function useCreateOrder(options?: UseCreateOrderOptions) {
   });
 
   const createOrder = useCallback(
-    async (packageType: PackageType) => {
+    async (packageType: PackageType, voucherCode?: string) => {
       setState({ isLoading: true, error: null, order: null });
       try {
         const response = await fetch("/api/payment/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ packageType }),
+          body: JSON.stringify({
+            packageType,
+            ...(voucherCode && { voucherCode }),
+          }),
         });
         const data = await response.json();
         if (!response.ok || !data.success) {

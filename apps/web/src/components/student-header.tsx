@@ -12,6 +12,7 @@ import {
   Sparkles,
   Crown,
   CreditCard,
+  Headphones,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -77,33 +78,62 @@ export function StudentHeaderClient({ user }: StudentHeaderClientProps) {
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
-            {[
-              { href: "/account" as const, label: "Tài khoản", icon: Crown },
-              { href: "/courses" as const, label: "Khóa học", icon: BookOpen, alsoActiveOn: ["/learn"] },
-              { href: "/notebook" as const, label: "Sổ từ vựng", icon: null },
-            ].map((item) => {
-              const isActive =
-                pathname === item.href ||
-                pathname.startsWith(item.href + "/") ||
-                (item.alsoActiveOn?.some((path) => pathname.startsWith(path)) ?? false);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                    isActive
-                      ? "bg-indigo-50 text-indigo-700"
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                  }`}
-                >
-                  {item.icon && <item.icon className="size-4" />}
-                  {item.label}
-                  {isActive && (
-                    <span className="absolute -bottom-[17px] left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-indigo-500" />
-                  )}
-                </Link>
-              );
-            })}
+            <Link
+              href="/account"
+              className={`relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                pathname === "/account"
+                  ? "bg-indigo-50 text-indigo-700"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              <Crown className="size-4" />
+              Tài khoản
+              {pathname === "/account" && (
+                <span className="absolute -bottom-[17px] left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-indigo-500" />
+              )}
+            </Link>
+            <Link
+              href="/courses"
+              className={`relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                pathname === "/courses" || pathname.startsWith("/learn")
+                  ? "bg-indigo-50 text-indigo-700"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              <BookOpen className="size-4" />
+              Khóa học
+              {(pathname === "/courses" || pathname.startsWith("/learn")) && (
+                <span className="absolute -bottom-[17px] left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-indigo-500" />
+              )}
+            </Link>
+            <Link
+              href="/notebook"
+              className={`relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                pathname === "/notebook"
+                  ? "bg-indigo-50 text-indigo-700"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              Sổ từ vựng
+              {pathname === "/notebook" && (
+                <span className="absolute -bottom-[17px] left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-indigo-500" />
+              )}
+            </Link>
+            <Link
+              // @ts-ignore
+              href="/support"
+              className={`relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                pathname.startsWith("/support")
+                  ? "bg-indigo-50 text-indigo-700"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              <Headphones className="size-4" />
+              Hỗ trợ
+              {pathname.startsWith("/support") && (
+                <span className="absolute -bottom-[17px] left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-indigo-500" />
+              )}
+            </Link>
           </nav>
         </div>
 

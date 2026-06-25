@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { GraduationCap, Mail } from "lucide-react";
 
 export default function Footer() {
+  const router = useRouter();
+
   return (
     <footer className="w-full bg-slate-900 text-slate-300 pt-16 pb-8">
       <div className="container mx-auto px-4 md:px-6">
@@ -53,6 +56,15 @@ export default function Footer() {
               Hỗ trợ
             </h4>
             <ul className="flex flex-col space-y-2.5">
+              <li>
+                <button
+                  // @ts-ignore
+                  onClick={() => router.push("/support")}
+                  className="text-sm text-slate-400 hover:text-white transition-colors text-left"
+                >
+                  Gửi yêu cầu hỗ trợ
+                </button>
+              </li>
               <li>
                 <a href="mailto:support@engducation.edu.vn" className="text-sm text-slate-400 hover:text-white transition-colors">
                   Liên hệ hỗ trợ

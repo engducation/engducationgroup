@@ -148,6 +148,7 @@ export default function AdminDashboardPage() {
   const publishedCourses = Number(overview?.totals?.publishedCourses ?? 0);
   const totalCourses = Number(overview?.totals?.totalCourses ?? 0);
   const pendingOrders = Number(overview?.totals?.pendingOrders ?? 0);
+  const todayRevenue = Number(overview?.totals?.todayRevenue ?? 0);
 
   return (
     <div className="space-y-8">
@@ -197,11 +198,10 @@ export default function AdminDashboardPage() {
           isLoading={isLoading}
         />
         <StatCard
-          label="Khóa học đã xuất bản"
-          value={publishedCourses}
-          icon={BookOpen}
+          label="Doanh thu hôm nay"
+          value={`${todayRevenue.toLocaleString("vi-VN")}đ`}
+          icon={Star}
           accent="from-indigo-500 to-violet-600"
-          trend={`${totalCourses} tổng cộng`}
           isLoading={isLoading}
         />
         <StatCard

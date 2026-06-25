@@ -17,6 +17,7 @@ export const sepayTransferTypeSchema = z.enum(SEPAY_TRANSFER_TYPES);
 
 export const createOrderSchema = z.object({
   packageType: packageTypeSchema,
+  voucherCode: z.string().optional(),
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
@@ -41,6 +42,9 @@ export const orderSummarySchema = z.object({
     bankCode: z.string(),
     accountName: z.string(),
   }),
+  // Voucher info (optional)
+  appliedVoucher: z.string().optional().nullable(),
+  discountAmount: z.number().int().nonnegative().optional().nullable(),
 });
 export type OrderSummary = z.infer<typeof orderSummarySchema>;
 

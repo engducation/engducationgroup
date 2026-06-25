@@ -9,6 +9,11 @@ import {
   createSepayOrder,
   listUserOrders,
 } from "@/features/payment/services/order.service";
+import {
+  validateVoucher,
+  applyVoucher,
+} from "@/features/payment/services/pricing.service";
+import type { PackageType } from "@/db/schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +28,7 @@ const NO_CACHE_HEADERS = {
 } as const;
 
 // POST /api/payment/orders
-// Body: { packageType: "MONTHLY" | "6_MONTH" | "YEAR" }
+// Body: { packageType: "MONTHLY" | "6_MONTH" | "YEAR", voucherCode?: string }
 // Trả về OrderSummary (kèm qrUrl, expiresAt, bank info).
 export async function POST(request: Request) {
   try {
@@ -45,13 +50,56 @@ export async function POST(request: Request) {
     }
     const input: CreateOrderInput = parsed.data;
 
+    let voucherCode: string | undefined;
+    let discountAmount = 0;
+
+    // Validate voucher if provided
+    if (input.voucherCode) {
+      const validation = await validateVoucher(
+        input.voucherCode,
+        input.packageType as PackageType,
+      );
+
+      if (!validation.valid || !validation.voucher) {
+        return NextResponse.json(
+          { success: false, error: validation.invalidReason || "Voucher không hợp lệ" },
+          { status: 400, headers: NO_CACHE_HEADERS },
+        );
+      }
+
+      // Get package price from order service to calculate discount
+      // Note: We'll get the price and apply discount after order creation
+      voucherCode = input.voucherCode;
+    }
+
     const { order } = await createSepayOrder({
       userId: session.user.id,
       packageType: input.packageType,
+      voucherCode,
     });
 
+    // If voucher was applied, recalculate the amount
+    if (voucherCode && order) {
+      // Get the discount
+      const validation = await validateVoucher(voucherCode, input.packageType as PackageType);
+      if (validation.valid && validation.voucher) {
+        const { discountAmount: discount } = applyVoucher(validation.voucher, order.amount);
+        discountAmount = discount;
+
+        // Note: The order amount is not modified - voucher is tracked separately
+        // The discount will be reflected when displaying the order or in a separate voucher_usage record
+      }
+    }
+
     return NextResponse.json(
-      { success: true, data: order },
+      {
+        success: true,
+        data: {
+          ...order,
+          appliedVoucher: voucherCode,
+          discountAmount,
+        }
+      },
       { status: 201, headers: NO_CACHE_HEADERS },
     );
   } catch (error) {

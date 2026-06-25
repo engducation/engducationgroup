@@ -692,7 +692,11 @@ export default function LessonConfigClient({
         )}
 
         {lessonType === "VOCABULARY" && (
-          <VocabularyLessonConfig ref={vocabularyRef} lessonId={lessonId} />
+          <VocabularyLessonConfig
+            ref={vocabularyRef}
+            lessonId={lessonId}
+            onHasChanges={markChanged}
+          />
         )}
       </main>
     </div>

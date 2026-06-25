@@ -22,6 +22,8 @@ import Footer from "@/components/footer";
 import Header from "@/components/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { CalculatedPrice } from "@/features/payment/services/pricing.service";
+import { PACKAGES } from "@/features/payment/services/packages";
 
 const testimonials = [
   {
@@ -93,7 +95,40 @@ const features = [
   },
 ];
 
-export default function HomeClient() {
+interface HomeClientProps {
+  initialPricing?: CalculatedPrice[];
+}
+
+const formatPrice = (price: number) =>
+  new Intl.NumberFormat("vi-VN").format(price);
+
+function getDefaultPricing(): CalculatedPrice[] {
+  return PACKAGES.map((pkg) => ({
+    packageType: pkg.type,
+    label: pkg.label,
+    description: pkg.description,
+    basePrice: pkg.price,
+    currentPrice: pkg.price,
+    originalPrice: pkg.originalPrice ?? pkg.price,
+    discountPercent: 0,
+    isDiscounted: false,
+    discountEndsAt: null,
+    features: pkg.features,
+    recommended: pkg.recommended ?? false,
+    duration: pkg.duration,
+  }));
+}
+
+export default function HomeClient({ initialPricing }: HomeClientProps) {
+  // Merge initial pricing with defaults for display
+  const pricing = initialPricing?.length
+    ? initialPricing
+    : getDefaultPricing();
+
+  // Helper to get pricing for each package
+  const getPricing = (type: "MONTHLY" | "6_MONTH" | "YEAR") =>
+    pricing.find((p) => p.packageType === type) ?? getDefaultPricing().find((p) => p.packageType === type)!;
+
   return (
     <>
       <Header />
@@ -317,121 +352,163 @@ export default function HomeClient() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto items-stretch">
               {/* Card 1: Gói 1 Tháng */}
-              <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 lg:p-8 hover:shadow-xl transition-all duration-300 flex flex-col">
-                <div className="space-y-6 flex-1">
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-bold text-slate-900">Gói Cơ Bản</h3>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-black text-slate-900">49K</span>
-                      <span className="text-slate-500">/ tháng</span>
+              {(() => {
+                const pkg = getPricing("MONTHLY");
+                const isDiscounted = pkg.isDiscounted && pkg.discountPercent > 0;
+                return (
+                  <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 lg:p-8 hover:shadow-xl transition-all duration-300 flex flex-col">
+                    <div className="space-y-6 flex-1">
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-bold text-slate-900">{pkg.label}</h3>
+                        <div className="flex items-baseline gap-1">
+                          {isDiscounted && (
+                            <span className="text-lg text-slate-400 line-through mr-1">
+                              {formatPrice(pkg.basePrice)}đ
+                            </span>
+                          )}
+                          <span className={`text-4xl font-black ${isDiscounted ? "text-emerald-600" : "text-slate-900"}`}>
+                            {formatPrice(pkg.currentPrice)}đ
+                          </span>
+                          <span className="text-slate-500">/ tháng</span>
+                        </div>
+                        {isDiscounted && (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">
+                              -{pkg.discountPercent}%
+                            </Badge>
+                            <span className="text-sm text-slate-500">Tiết kiệm {formatPrice(pkg.basePrice - pkg.currentPrice)}đ</span>
+                          </div>
+                        )}
+                        {!isDiscounted && <p className="text-sm text-slate-500">Phù hợp để trải nghiệm</p>}
+                      </div>
+                      <div className="h-px bg-slate-200" />
+                      <ul className="space-y-3 text-sm text-slate-600">
+                        {pkg.features.map((feature, i) => (
+                          <li key={i} className="flex items-start gap-3">
+                            <Check className="size-5 text-emerald-500 shrink-0 mt-0.5" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <p className="text-sm text-slate-500">Phù hợp để trải nghiệm</p>
+                    <Link href="/login" className="w-full mt-8">
+                      <Button variant="outline" className="w-full py-5 font-bold border-2 border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl">
+                        Đăng ký ngay
+                      </Button>
+                    </Link>
                   </div>
-                  <div className="h-px bg-slate-200" />
-                  <ul className="space-y-3 text-sm text-slate-600">
-                    <li className="flex items-start gap-3">
-                      <Check className="size-5 text-emerald-500 shrink-0 mt-0.5" />
-                      Học từ vựng theo danh mục
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="size-5 text-emerald-500 shrink-0 mt-0.5" />
-                      Quiz trắc nghiệm cơ bản
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="size-5 text-emerald-500 shrink-0 mt-0.5" />
-                      Xem video bài giảng (giới hạn)
-                    </li>
-                  </ul>
-                </div>
-                <Link href="/login" className="w-full mt-8">
-                  <Button variant="outline" className="w-full py-5 font-bold border-2 border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl">
-                    Đăng ký ngay
-                  </Button>
-                </Link>
-              </div>
+                );
+              })()}
 
               {/* Card 2: Gói 6 Tháng */}
-              <div className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 rounded-2xl p-6 lg:p-8 shadow-2xl shadow-indigo-500/30 flex flex-col relative">
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-900 font-black px-4 py-1 rounded-full text-xs uppercase shadow-lg">
-                  Phổ biến nhất
-                </div>
-                <div className="space-y-6 flex-1 pt-2">
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-bold text-white">Gói Premium</h3>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-black text-white">269K</span>
-                      <span className="text-white/70">/ 6 tháng</span>
+              {(() => {
+                const pkg = getPricing("6_MONTH");
+                const isDiscounted = pkg.isDiscounted && pkg.discountPercent > 0;
+                return (
+                  <div className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 rounded-2xl p-6 lg:p-8 shadow-2xl shadow-indigo-500/30 flex flex-col relative">
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-900 font-black px-4 py-1 rounded-full text-xs uppercase shadow-lg">
+                      {pkg.recommended ? "Phổ biến nhất" : "Khuyến nghị"}
                     </div>
-                    <p className="text-sm text-white/70">Tiết kiệm 10% so với mua lẻ</p>
+                    <div className="space-y-6 flex-1 pt-2">
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-bold text-white">{pkg.label}</h3>
+                        <div className="flex items-baseline gap-1">
+                          {isDiscounted && (
+                            <span className="text-lg text-white/60 line-through mr-1">
+                              {formatPrice(pkg.basePrice)}đ
+                            </span>
+                          )}
+                          <span className={`text-4xl font-black ${isDiscounted ? "text-amber-300" : "text-white"}`}>
+                            {formatPrice(pkg.currentPrice)}đ
+                          </span>
+                          <span className="text-white/70">/ 6 tháng</span>
+                        </div>
+                        {isDiscounted ? (
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-amber-400 text-slate-900 text-xs">
+                              -{pkg.discountPercent}%
+                            </Badge>
+                            <span className="text-sm text-white/70">Tiết kiệm {formatPrice(pkg.basePrice - pkg.currentPrice)}đ</span>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-white/70">Tiết kiệm 10% so với mua lẻ</p>
+                        )}
+                      </div>
+                      <div className="h-px bg-white/20" />
+                      <ul className="space-y-3 text-sm text-white/90">
+                        {pkg.features.map((feature, i) => (
+                          <li key={i} className="flex items-start gap-3">
+                            <Check className="size-5 text-white shrink-0 mt-0.5" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <Link href="/login" className="w-full mt-8">
+                      <Button className="w-full py-5 font-bold bg-white hover:bg-white/90 text-indigo-600 shadow-xl rounded-xl">
+                        Nâng cấp ngay
+                      </Button>
+                    </Link>
                   </div>
-                  <div className="h-px bg-white/20" />
-                  <ul className="space-y-3 text-sm text-white/90">
-                    <li className="flex items-start gap-3">
-                      <Check className="size-5 text-white shrink-0 mt-0.5" />
-                      Tất cả tính năng gói cơ bản
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="size-5 text-white shrink-0 mt-0.5" />
-                      Video bài giảng không giới hạn
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="size-5 text-white shrink-0 mt-0.5" />
-                      Quiz nâng cao + giải thích chi tiết
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="size-5 text-white shrink-0 mt-0.5" />
-                      AI Writing Assistant (50 lượt/tháng)
-                    </li>
-                  </ul>
-                </div>
-                <Link href="/login" className="w-full mt-8">
-                  <Button className="w-full py-5 font-bold bg-white hover:bg-white/90 text-indigo-600 shadow-xl rounded-xl">
-                    Nâng cấp ngay
-                  </Button>
-                </Link>
-              </div>
+                );
+              })()}
 
               {/* Card 3: Gói 1 Năm */}
-              <div className="bg-slate-900 rounded-2xl border border-slate-700 p-6 lg:p-8 hover:shadow-2xl transition-all duration-300 flex flex-col relative">
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 font-black px-4 py-1 rounded-full text-xs uppercase shadow-lg z-10">
-                  Tiết kiệm nhất
-                </div>
-                <div className="space-y-6 flex-1 pt-4">
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-bold text-white">Gói Pro</h3>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-black text-white">499K</span>
-                      <span className="text-slate-400">/ năm</span>
+              {(() => {
+                const pkg = getPricing("YEAR");
+                const isDiscounted = pkg.isDiscounted && pkg.discountPercent > 0;
+                const monthlyPrice = Math.round(pkg.currentPrice / 12);
+                return (
+                  <div className="bg-slate-900 rounded-2xl border border-slate-700 p-6 lg:p-8 hover:shadow-2xl transition-all duration-300 flex flex-col relative">
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 font-black px-4 py-1 rounded-full text-xs uppercase shadow-lg z-10">
+                      Tiết kiệm nhất
                     </div>
-                    <p className="text-sm text-slate-400">Tương đương 42K/tháng</p>
+                    <div className="space-y-6 flex-1 pt-4">
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-bold text-white">{pkg.label}</h3>
+                        <div className="flex items-baseline gap-1">
+                          {isDiscounted && (
+                            <span className="text-lg text-slate-500 line-through mr-1">
+                              {formatPrice(pkg.basePrice)}đ
+                            </span>
+                          )}
+                          <span className={`text-4xl font-black ${isDiscounted ? "text-amber-400" : "text-white"}`}>
+                            {formatPrice(pkg.currentPrice)}đ
+                          </span>
+                          <span className="text-slate-400">/ năm</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {isDiscounted ? (
+                            <>
+                              <Badge className="bg-amber-400 text-slate-900 text-xs">
+                                -{pkg.discountPercent}%
+                              </Badge>
+                              <span className="text-sm text-slate-400">Tiết kiệm {formatPrice(pkg.basePrice - pkg.currentPrice)}đ</span>
+                            </>
+                          ) : (
+                            <p className="text-sm text-slate-400">Tương đương {formatPrice(monthlyPrice)}đ/tháng</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="h-px bg-slate-700" />
+                      <ul className="space-y-3 text-sm text-slate-300">
+                        {pkg.features.map((feature, i) => (
+                          <li key={i} className="flex items-start gap-3">
+                            <Check className="size-5 text-emerald-400 shrink-0 mt-0.5" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <Link href="/login" className="w-full mt-8">
+                      <Button className="w-full py-5 font-bold bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-400 hover:to-violet-400 text-white shadow-xl rounded-xl">
+                        Mua ngay
+                      </Button>
+                    </Link>
                   </div>
-                  <div className="h-px bg-slate-700" />
-                  <ul className="space-y-3 text-sm text-slate-300">
-                    <li className="flex items-start gap-3">
-                      <Check className="size-5 text-emerald-400 shrink-0 mt-0.5" />
-                      Tất cả tính năng Premium
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="size-5 text-emerald-400 shrink-0 mt-0.5" />
-                      AI Writing Assistant không giới hạn
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="size-5 text-emerald-400 shrink-0 mt-0.5" />
-                      Báo cáo phân tích AI hàng tháng
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="size-5 text-emerald-400 shrink-0 mt-0.5" />
-                      Hỗ trợ ưu tiên 24/7
-                    </li>
-                  </ul>
-                </div>
-                <Link href="/login" className="w-full mt-8">
-                  <Button className="w-full py-5 font-bold bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-400 hover:to-violet-400 text-white shadow-xl rounded-xl">
-                    Mua ngay
-                  </Button>
-                </Link>
-              </div>
+                );
+              })()}
             </div>
           </div>
         </section>

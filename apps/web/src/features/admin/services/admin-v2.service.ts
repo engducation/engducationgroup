@@ -302,17 +302,43 @@ export async function archiveAdminCourse(courseId: string) {
 export async function getAdminCourseDashboard() {
   const courses = await db.query.course.findMany();
 
+  // Get order analytics from SePay service
+  const { getSepayAdminAnalytics, listSepayOrdersForAdmin } = await import("@/features/payment/services/admin-order.service");
+  const analytics = await getSepayAdminAnalytics();
+
+  // Build package distribution from successful orders
+  const { rows } = await listSepayOrdersForAdmin({ status: "SUCCESS", limit: 1000 });
+  const distributionMap = new Map<string, { count: number; revenue: number }>();
+  for (const r of rows) {
+    const existing = distributionMap.get(r.packageType) ?? { count: 0, revenue: 0 };
+    distributionMap.set(r.packageType, {
+      count: existing.count + 1,
+      revenue: existing.revenue + r.amount,
+    });
+  }
+
+  const { PACKAGE_LABELS } = await import("@/db/schema");
+  const packageDistribution = Array.from(distributionMap.entries()).map(([pkg, data]) => ({
+    packageType: pkg,
+    label: PACKAGE_LABELS[pkg as PackageType] ?? pkg,
+    count: data.count,
+    revenue: data.revenue,
+  }));
+
   return {
     totals: {
       totalCourses: courses.length,
       publishedCourses: courses.filter((c) => c.status === "PUBLISHED").length,
       draftCourses: courses.filter((c) => c.status === "DRAFT").length,
       pausedCourses: courses.filter((c) => c.status === "ARCHIVED").length,
-      totalRevenue: 0,
-      paidOrders: 0,
-      pendingOrders: 0,
+      totalRevenue: analytics.totalRevenue,
+      paidOrders: analytics.successCount,
+      pendingOrders: analytics.pendingCount,
+      successOrders: analytics.successCount,
+      todayRevenue: analytics.todayRevenue,
     },
-    packageDistribution: [],
+    packageDistribution,
+    analytics,
   };
 }
 

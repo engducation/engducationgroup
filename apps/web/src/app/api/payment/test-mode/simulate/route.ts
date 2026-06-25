@@ -8,7 +8,6 @@ import {
   listPendingOrders,
 } from "@/features/payment/services/order.service";
 import {
-  computeHmacSignature,
   processSepayWebhook,
 } from "@/features/payment/services/sepay-webhook.service";
 import { nanoid } from "nanoid";
@@ -21,7 +20,7 @@ export const dynamic = "force-dynamic";
 // Chỉ hoạt động khi NODE_ENV !== "production" (chống lộ test endpoint ở prod).
 // Cần auth student. Dùng để verify end-to-end flow mà không cần SePay dashboard.
 //
-// Nếu body không truyền orderCode: tự động lấy order PENDING gần nhất của user.
+// Nếu body không truyền paymentMemo/orderCode: tự động lấy order PENDING gần nhất của user.
 // Nếu body không truyền amount: dùng đúng amount của order đó.
 export async function POST(request: Request) {
   if (env.NODE_ENV === "production") {
@@ -50,9 +49,19 @@ export async function POST(request: Request) {
     }
     const input = parsed.data;
 
-    // Resolve orderCode: nếu không truyền, lấy order PENDING gần nhất của user.
-    let orderCode = input.orderCode;
-    if (!orderCode) {
+    const { getOrderByCode } = await import("@/features/payment/services/order.service");
+
+    // Resolve order: ưu tiên paymentMemo, fallback orderCode
+    let orderRow = input.paymentMemo
+      ? await getOrderByMemoForTest(input.paymentMemo)
+      : null;
+
+    if (!orderRow && input.orderCode) {
+      orderRow = await getOrderByCode(input.orderCode);
+    }
+
+    // Nếu không truyền gì, lấy order PENDING gần nhất của user
+    if (!orderRow) {
       const pending = await listPendingOrders(100);
       const userPending = pending.find((o) => o.userId === session.user.id);
       if (!userPending) {
@@ -64,14 +73,12 @@ export async function POST(request: Request) {
           { status: 404 },
         );
       }
-      orderCode = userPending.orderCode;
+      orderRow = await getOrderByCode(userPending.orderCode);
     }
 
-    const { getOrderByCode } = await import("@/features/payment/services/order.service");
-    const orderRow = await getOrderByCode(orderCode);
     if (!orderRow) {
       return NextResponse.json(
-        { success: false, error: `Không tìm thấy order với code ${orderCode}` },
+        { success: false, error: "Không tìm thấy order" },
         { status: 404 },
       );
     }
@@ -93,8 +100,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build SePay-style payload
+    // Build SePay-style payload dùng paymentMemo (16 chars, đáng tin cậy)
     const transactionId = String(Date.now()); // unique per test
+    const content = `${orderRow.paymentMemo ?? orderRow.orderCode} ${nanoid(4).toLowerCase()}`;
     const payload = {
       gateway: input.gateway,
       transactionDate:
@@ -102,8 +110,8 @@ export async function POST(request: Request) {
         new Date().toISOString().replace("T", " ").slice(0, 19),
       accountNumber: input.accountNumber ?? env.SEPAY_BANK_ACCOUNT,
       subAccount: null,
-      code: orderRow.orderCode,
-      content: `${orderRow.orderCode} ${nanoid(4).toLowerCase()}`,
+      code: orderRow.paymentMemo ?? orderRow.orderCode,
+      content,
       transferType: input.transferType,
       description: input.description,
       transferAmount: amount,
@@ -118,9 +126,9 @@ export async function POST(request: Request) {
     }
 
     const rawBody = JSON.stringify(payload);
-    const signature = computeHmacSignature(rawBody, env.SEPAY_WEBHOOK_SECRET);
 
-    const result = await processSepayWebhook({ rawBody, signature });
+    // bypassAuth: true vì đây là test endpoint, không cần verify IP/API key
+    const result = await processSepayWebhook({ rawBody, apiKey: null, bypassAuth: true });
 
     return NextResponse.json({
       success: true,
@@ -139,4 +147,10 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+// Helper: get order by paymentMemo for test
+async function getOrderByMemoForTest(paymentMemo: string) {
+  const { getOrderByMemo } = await import("@/features/payment/services/order.service");
+  return getOrderByMemo(paymentMemo);
 }

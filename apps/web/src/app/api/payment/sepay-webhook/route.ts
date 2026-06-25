@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: result.error }, { status: 400 });
 
     case "order_not_found":
-      console.warn("SePay webhook: order not found for code", result.orderCode);
+      console.warn("SePay webhook: order not found for paymentMemo", result.paymentMemo);
       return NextResponse.json({ success: true });
 
     case "order_already_settled":

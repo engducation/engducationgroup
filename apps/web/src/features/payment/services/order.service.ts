@@ -8,6 +8,7 @@ import {
   generateOrderCode,
   PACKAGE_LABELS,
 } from "./vietqr.service";
+import { generatePaymentMemo } from "../utils/payment-memo.utils";
 import { getPackageByType } from "./packages";
 import type { OrderSummary, PackageType } from "../types/schemas";
 
@@ -35,10 +36,12 @@ function expiresAtFromNow(): Date {
 function toOrderSummary(order: {
   id: string;
   orderCode: string;
+  paymentMemo: string;
   packageType: string;
   amount: number;
   status: string;
   expiresAt: Date;
+  subscriptionExpiresAt: Date | null;
   createdAt: Date;
 }): OrderSummary {
   const packageType = order.packageType as PackageType;
@@ -46,13 +49,17 @@ function toOrderSummary(order: {
   return {
     id: order.id,
     orderCode: order.orderCode,
+    paymentMemo: order.paymentMemo,
     packageType,
     packageLabel: pkg?.label ?? PACKAGE_LABELS[packageType] ?? packageType,
     amount: order.amount,
     status: order.status as OrderSummary["status"],
     expiresAt: new Date(order.expiresAt).toISOString(),
+    subscriptionExpiresAt: order.subscriptionExpiresAt
+      ? new Date(order.subscriptionExpiresAt).toISOString()
+      : null,
     createdAt: new Date(order.createdAt).toISOString(),
-    qrUrl: buildOrderQrUrl({ orderCode: order.orderCode, amount: order.amount }),
+    qrUrl: buildOrderQrUrl({ paymentMemo: order.paymentMemo, amount: order.amount }),
     bank: {
       accountNumber: env.SEPAY_BANK_ACCOUNT,
       bankCode: env.SEPAY_BANK_CODE,
@@ -75,6 +82,7 @@ export async function createSepayOrder(
 
   const id = `ord_${nanoid(14)}`;
   const orderCode = await generateOrderCode(input.packageType);
+  const paymentMemo = generatePaymentMemo();
   const expiresAt = expiresAtFromNow();
 
   const [inserted] = await db
@@ -83,6 +91,7 @@ export async function createSepayOrder(
       id,
       userId: input.userId,
       orderCode,
+      paymentMemo,
       packageType: input.packageType,
       amount,
       status: "PENDING",
@@ -163,6 +172,37 @@ export async function listPendingOrders(limit = 50) {
     .limit(limit);
 
   return rows;
+}
+
+// ─── Lookup Order by paymentMemo (dùng cho webhook) ──────────────────────────
+// paymentMemo là chuỗi ngắn 16 ký tự (EP_<12 chars>) được embed trong VietQR content.
+// SePay echo lại nguyên văn trong webhook → dùng để lookup orderId (PK) trong DB.
+
+export async function getOrderByMemo(paymentMemo: string) {
+  const [row] = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.paymentMemo, paymentMemo))
+    .limit(1);
+  return row ?? null;
+}
+
+// ─── Lookup Order for webhook processing ─────────────────────────────────────
+// Ưu tiên paymentMemo (16 chars, đáng tin cậy), fallback orderCode (cũ).
+
+export async function getOrderForWebhook(params: {
+  paymentMemo?: string | null;
+  orderCode?: string | null;
+}) {
+  if (params.paymentMemo) {
+    const order = await getOrderByMemo(params.paymentMemo);
+    if (order) return { order, lookupMethod: "paymentMemo" as const };
+  }
+  if (params.orderCode) {
+    const order = await getOrderByCode(params.orderCode);
+    if (order) return { order, lookupMethod: "orderCode" as const };
+  }
+  return null;
 }
 
 // ─── Lookup Order by orderCode (dùng cho webhook) ──────────────────────────

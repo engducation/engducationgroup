@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { Payment } from "@/features/payment/components/payment-shell";
 import { PaymentQrCard } from "@/features/payment/components/payment-qr-card";
@@ -13,14 +13,14 @@ interface PaymentCheckoutClientProps {
 }
 
 /**
- * Bước 2: hiển thị QR + status polling. Khi SUCCESS → navigate về /courses.
+ * Bước 2: hiển thị status + QR. Khi SUCCESS → hiển thị nút Làm mới để về account.
  */
 export function PaymentCheckoutClient({ initialOrder }: PaymentCheckoutClientProps) {
   const router = useRouter();
 
   const handleSuccess = () => {
-    router.push("/courses");
-    router.refresh();
+    // Navigate to account page after refresh
+    router.push("/account");
   };
 
   return (
@@ -44,11 +44,11 @@ export function PaymentCheckoutClient({ initialOrder }: PaymentCheckoutClientPro
           </div>
         </div>
 
+        {/* Status panel + polling - HIỂN THỊ TRƯỚC QR */}
+        <PaymentStatusPanel onSuccess={handleSuccess} showRefreshButton />
+
         {/* QR + Bank info */}
         <PaymentCheckoutQr />
-
-        {/* Status panel + polling */}
-        <PaymentStatusPanel onSuccess={handleSuccess} />
 
         {/* Trust signal */}
         <div className="flex items-center justify-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">

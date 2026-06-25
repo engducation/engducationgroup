@@ -108,9 +108,12 @@ export function buildVietQrUrl(input: BuildVietQrUrlInput): string {
 }
 
 // ─── High-level helper: build QR cho order ──────────────────────────────────
+// VietQR content field giờ dùng paymentMemo (16 chars: "EP_<12 chars>")
+// thay vì orderCode vì orderCode bị ngân hàng cắt ngắn (~25 char limit).
+// paymentMemo được SePay echo lại trong webhook → dùng để lookup order.
 
 export interface BuildOrderQrInput {
-  orderCode: string;
+  paymentMemo: string;
   amount: number;
 }
 
@@ -120,7 +123,7 @@ export function buildOrderQrUrl(input: BuildOrderQrInput): string {
     accountNumber: env.SEPAY_BANK_ACCOUNT,
     accountName: env.SEPAY_ACCOUNT_NAME,
     amount: input.amount,
-    content: input.orderCode,
+    content: input.paymentMemo,
     template: "compact2",
   });
 }

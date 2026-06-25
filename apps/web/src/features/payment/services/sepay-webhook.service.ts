@@ -16,11 +16,12 @@ import {
 } from "../types/schemas";
 import {
   getOrderByCode,
+  getOrderForWebhook,
   isSepayTransactionProcessed,
   markOrderExpiredIfDue,
 } from "./order.service";
 import { grantSubscriptionInTx, type DbTx } from "./subscription.service";
-import { parseOrderCodeFromContent } from "./vietqr.service";
+import { parsePaymentMemo } from "../utils/payment-memo.utils";
 
 // ─── Authentication: IP Whitelist + API Key ──────────────────────────────────
 //
@@ -311,19 +312,26 @@ export async function processSepayWebhook(
     }
   }
 
-  // Resolve orderCode (ưu tiên `code` riêng, fallback parse từ `content`).
-  // `parseOrderCodeFromContent` giờ là async (query DB lấy active patterns).
-  const fromCode = payload.code?.trim();
-  const orderCode = fromCode || (await parseOrderCodeFromContent(payload.content));
-  if (!orderCode) {
-    return { kind: "order_not_found", orderCode: "" };
+  // Bước 3: Resolve paymentMemo + lookup order
+  // Ưu tiên paymentMemo (16 chars, không bị cắt) → dùng để lookup bằng orderId.
+  // Fallback orderCode (cũ) để tương thích với orders tạo trước khi có paymentMemo.
+  const paymentMemo = parsePaymentMemo(payload.content, payload.code ?? null);
+  const orderLookup = await getOrderForWebhook({
+    paymentMemo,
+    orderCode: payload.code ?? null,
+  });
+
+  if (!orderLookup) {
+    const raw = paymentMemo ?? payload.code ?? "(empty)";
+    console.warn("SePay webhook: order not found", {
+      paymentMemo,
+      code: payload.code,
+      content: payload.content,
+    });
+    return { kind: "order_not_found", paymentMemo: raw };
   }
 
-  // Bước 3: Tìm & đối soát order
-  const order = await getOrderByCode(orderCode);
-  if (!order) {
-    return { kind: "order_not_found", orderCode };
-  }
+  const { order } = orderLookup;
   if (order.status === ("SUCCESS" as OrderStatus)) {
     return { kind: "order_already_settled", orderId: order.id };
   }
@@ -368,10 +376,6 @@ export async function processSepayWebhook(
 
   // Bước 5: Phản hồi
   return { kind: "ok", orderId: order.id, alreadyProcessed: false };
-}
-
-async function parseSepayCodeFromContent(content: string): Promise<string | null> {
-  return await parseOrderCodeFromContent(content);
 }
 
 // ─── Manual Approve (admin) ─────────────────────────────────────────────────

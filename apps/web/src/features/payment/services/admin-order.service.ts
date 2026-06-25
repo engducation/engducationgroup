@@ -25,6 +25,7 @@ const MS_PER_MINUTE = 60 * 1000;
 export interface SepayOrderAdminRow {
   id: string;
   orderCode: string;
+  paymentMemo: string | null;   // Có thể null với orders cũ (trước migration)
   userId: string;
   userName: string | null;
   userEmail: string | null;
@@ -49,6 +50,7 @@ function expiresAtFromNow(): Date {
 function toOrderSummary(row: {
   id: string;
   orderCode: string;
+  paymentMemo: string | null;
   packageType: string;
   amount: number;
   status: string;
@@ -59,13 +61,17 @@ function toOrderSummary(row: {
   return {
     id: row.id,
     orderCode: row.orderCode,
+    paymentMemo: row.paymentMemo ?? "",
     packageType,
     packageLabel: PACKAGE_LABELS[packageType] ?? packageType,
     amount: row.amount,
     status: row.status as OrderStatus,
     expiresAt: new Date(row.expiresAt).toISOString(),
     createdAt: new Date(row.createdAt).toISOString(),
-    qrUrl: buildOrderQrUrl({ orderCode: row.orderCode, amount: row.amount }),
+    qrUrl: buildOrderQrUrl({
+      paymentMemo: row.paymentMemo ?? "",
+      amount: row.amount,
+    }),
     bank: {
       accountNumber: env.SEPAY_BANK_ACCOUNT,
       bankCode: env.SEPAY_BANK_CODE,
@@ -130,6 +136,7 @@ export async function listSepayOrdersForAdmin(
     conditions.push(sql<boolean>`
       (
         lower(${orders.orderCode}) like ${like}
+        or lower(coalesce(${orders.paymentMemo}, '')) like ${like}
         or lower(coalesce(${user.name}, '')) like ${like}
         or lower(coalesce(${user.email}, '')) like ${like}
       )
@@ -141,6 +148,7 @@ export async function listSepayOrdersForAdmin(
     .select({
       id: orders.id,
       orderCode: orders.orderCode,
+      paymentMemo: orders.paymentMemo,
       userId: orders.userId,
       userName: user.name,
       userEmail: user.email,
@@ -215,6 +223,7 @@ export async function getSepayOrderDetailForAdmin(
     .select({
       id: orders.id,
       orderCode: orders.orderCode,
+      paymentMemo: orders.paymentMemo,
       userId: orders.userId,
       userName: user.name,
       userEmail: user.email,

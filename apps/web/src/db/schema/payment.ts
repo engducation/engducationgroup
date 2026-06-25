@@ -30,6 +30,13 @@ export const orders = pgTable(
     // Field này được nhúng vào nội dung chuyển khoản để SePay trích xuất ngược
     // lại khi bắn webhook. UNIQUE để tra cứu O(log n) khi webhook đến.
     orderCode: varchar("order_code", { length: 30 }).notNull().unique(),
+    // Chữ ký thanh toán ngắn gọn (16 ký tự: "EP_" + 12 nanoid chars).
+    // Format: EP_VxRs9m3pZqD8. Đây là giá trị duy nhất được nhúng vào VietQR content.
+    // SePay gửi lại nguyên văn trong webhook payload → dùng để lookup bằng orderId (PK).
+    // Không dùng orderCode vì bị ngân hàng cắt ngắn (limit ~25 chars).
+    paymentMemo: varchar("payment_memo", { length: 20 })
+      .notNull()
+      .unique(),
     packageType: varchar("package_type", { length: 20 })
       .$type<PackageType>()
       .notNull(),
@@ -59,6 +66,7 @@ export const orders = pgTable(
     index("orders_status_idx").on(table.status),
     index("orders_created_idx").on(table.createdAt),
     index("orders_expires_idx").on(table.expiresAt),
+    index("orders_payment_memo_idx").on(table.paymentMemo),
   ],
 );
 

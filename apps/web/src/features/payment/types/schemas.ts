@@ -27,11 +27,13 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export const orderSummarySchema = z.object({
   id: z.string(),
   orderCode: z.string(),
+  paymentMemo: z.string(),    // 16-char memo (EP_<12 chars>), dùng cho webhook lookup
   packageType: packageTypeSchema,
   packageLabel: z.string(),
   amount: z.number().int().positive(),
   status: orderStatusSchema,
   expiresAt: z.iso.datetime(),
+  subscriptionExpiresAt: z.iso.datetime().optional().nullable(), // Chỉ có khi SUCCESS
   createdAt: z.iso.datetime(),
   qrUrl: z.url(),
   bank: z.object({
@@ -66,7 +68,8 @@ export type SepayWebhookPayload = z.infer<typeof sepayWebhookPayloadSchema>;
 
 export const simulateWebhookSchema = z.object({
   // Cho phép tuỳ biến các trường trong payload để test edge cases
-  orderCode: z.string().min(1).optional(),
+  paymentMemo: z.string().min(1).optional(),   // Ưu tiên dùng paymentMemo (16 chars)
+  orderCode: z.string().min(1).optional(),    // Fallback cho orders cũ (trước khi có paymentMemo)
   amount: z.number().int().positive().optional(),
   gateway: z.string().min(1).default("MBBank"),
   transactionDate: z.string().min(1).optional(),
@@ -83,7 +86,7 @@ export type WebhookProcessResult =
   | { kind: "ok"; orderId: string; alreadyProcessed: boolean }
   | { kind: "ip_not_allowed"; clientIp: string }
   | { kind: "signature_invalid" }
-  | { kind: "order_not_found"; orderCode: string }
+  | { kind: "order_not_found"; paymentMemo: string }
   | { kind: "order_already_settled"; orderId: string }
   | { kind: "order_expired"; orderId: string; expiredAt: string }
   | { kind: "amount_mismatch"; expected: number; received: number; orderId: string }

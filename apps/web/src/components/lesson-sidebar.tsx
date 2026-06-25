@@ -92,7 +92,6 @@ function ModuleAccordion({
   defaultOpen?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const currentModuleId = module.id;
 
   // Auto-open if current lesson is in this module
   useEffect(() => {
@@ -103,6 +102,11 @@ function ModuleAccordion({
 
   const completedCount = module.lessons.filter(isLessonCompleted).length;
   const totalCount = module.lessons.length;
+
+  // Don't render module accordion if no lessons
+  if (totalCount === 0) {
+    return null;
+  }
 
   return (
     <div className="border-b border-slate-100 last:border-b-0">
@@ -199,18 +203,15 @@ export function LessonSidebar({ courseId, modules, currentLessonId }: LessonSide
   );
   const progressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
+  // Don't render sidebar if no lessons
+  if (totalLessons === 0) {
+    return null;
+  }
+
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-slate-100">
-        <Link
-          href={`/learn/${courseId}`}
-          className="flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors mb-3"
-        >
-          <ArrowLeft className="size-4" />
-          Quay về tổng quan
-        </Link>
-
         {/* Overall Progress */}
         <div className="bg-slate-50 rounded-lg p-3">
           <div className="flex items-center justify-between mb-2">

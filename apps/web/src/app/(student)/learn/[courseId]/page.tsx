@@ -182,7 +182,7 @@ export default async function StudentLearnPage({ params }: PageProps) {
         className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-indigo-600 transition"
       >
         <ArrowLeft className="size-4" />
-        Quay về danh sách khóa học
+        Quay về Trang chủ
       </Link>
 
       {/* Course Header */}

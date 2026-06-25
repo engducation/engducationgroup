@@ -15,6 +15,10 @@ export const user = pgTable("user", {
   subscriptionPlan: text("subscription_plan").default("FREE").notNull(),
   activatedAt: timestamp("activated_at"),
   expiresAt: timestamp("expires_at"),
+  // Thông tin cá nhân bổ sung
+  phone: text("phone"),
+  address: text("address"),
+  dateOfBirth: timestamp("date_of_birth"),
   // Giữ lại các trường cũ để tránh mất dữ liệu khi push
   status: text("status").default("ACTIVE").notNull(),
   banReason: text("ban_reason"),

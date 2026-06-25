@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 
 import "@/index.css";
+import "@/app/home.css";
 import Providers from "@/components/providers";
 
 const beVietnamPro = Be_Vietnam_Pro({

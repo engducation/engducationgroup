@@ -5,6 +5,8 @@ import { useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
+import { Eye, EyeOff, Loader2, User } from "lucide-react";
+import { useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
 
@@ -39,6 +41,7 @@ async function redirectToRoleDashboard(
 export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
   const router = useRouter();
   const { isPending } = authClient.useSession();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -56,7 +59,7 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
         {
           onSuccess: async (ctx) => {
             const user = ctx.data?.user as unknown as (SessionUser & { email: string }) | undefined;
-            toast.success("Đăng nhập thành công");
+            toast.success("Đăng ký thành công!");
             await redirectToRoleDashboard(router, user?.role);
           },
           onError: (error) => {
@@ -79,12 +82,7 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
   }
 
   return (
-    <div className="mx-auto w-full max-w-md p-6">
-      <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold text-slate-900">Tạo tài khoản mới</h1>
-        <p className="mt-1 text-sm text-slate-500">Đăng ký miễn phí để bắt đầu học</p>
-      </div>
-
+    <div>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -97,18 +95,25 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           <form.Field name="name">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor={field.name}>Họ và tên</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="Nguyễn Văn A"
-                  className="rounded-lg"
-                />
+                <Label htmlFor={field.name} className="text-sm font-medium text-slate-700">
+                  Họ và tên
+                </Label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <User className="size-4" />
+                  </div>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Nguyễn Văn A"
+                    className="pl-10 pr-4 py-2.5 rounded-xl border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  />
+                </div>
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-sm text-red-500">
+                  <p key={error?.message} className="text-sm text-red-500 mt-1">
                     {error?.message}
                   </p>
                 ))}
@@ -121,19 +126,28 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           <form.Field name="email">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor={field.name}>Email</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="email"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="you@example.com"
-                  className="rounded-lg"
-                />
+                <Label htmlFor={field.name} className="text-sm font-medium text-slate-700">
+                  Email
+                </Label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    type="email"
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="you@example.com"
+                    className="pl-10 pr-4 py-2.5 rounded-xl border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  />
+                </div>
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-sm text-red-500">
+                  <p key={error?.message} className="text-sm text-red-500 mt-1">
                     {error?.message}
                   </p>
                 ))}
@@ -146,19 +160,35 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           <form.Field name="password">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor={field.name}>Mật khẩu</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="password"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="Tối thiểu 8 ký tự"
-                  className="rounded-lg"
-                />
+                <Label htmlFor={field.name} className="text-sm font-medium text-slate-700">
+                  Mật khẩu
+                </Label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    type={showPassword ? "text" : "password"}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Tối thiểu 8 ký tự"
+                    className="pl-10 pr-10 py-2.5 rounded-xl border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-sm text-red-500">
+                  <p key={error?.message} className="text-sm text-red-500 mt-1">
                     {error?.message}
                   </p>
                 ))}
@@ -173,22 +203,30 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           {({ canSubmit, isSubmitting }) => (
             <Button
               type="submit"
-              className="w-full rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+              className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/25 font-semibold py-2.5 transition-all"
               disabled={!canSubmit || isSubmitting}
             >
-              {isSubmitting ? "Đang đăng ký..." : "Tạo tài khoản"}
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="size-4 animate-spin" />
+                  Đang đăng ký...
+                </span>
+              ) : (
+                "Tạo tài khoản"
+              )}
             </Button>
           )}
         </form.Subscribe>
       </form>
 
-      <div className="mt-4 text-center">
+      <div className="mt-5 text-center">
         <Button
           variant="link"
           onClick={onSwitchToSignIn}
-          className="text-sm text-indigo-600 hover:text-indigo-800"
+          className="text-sm text-slate-500 hover:text-indigo-600 transition-colors"
         >
-          Đã có tài khoản? Đăng nhập ngay
+          Đã có tài khoản?{" "}
+          <span className="font-semibold text-indigo-600">Đăng nhập ngay</span>
         </Button>
       </div>
     </div>

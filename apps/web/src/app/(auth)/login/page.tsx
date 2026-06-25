@@ -12,7 +12,7 @@ async function checkAuthAndRedirect() {
     if (role === "admin") {
       redirect("/admin/dashboard");
     } else {
-      redirect("/account");
+      redirect("/dashboard");
     }
   }
 

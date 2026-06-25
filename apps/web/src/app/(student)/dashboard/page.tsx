@@ -8,7 +8,6 @@ import { user } from "@/db/schema/auth";
 import { eq, desc } from "drizzle-orm";
 import {
   BookOpen,
-  Trophy,
   ArrowRight,
   Play,
   Sparkles,
@@ -120,21 +119,10 @@ export default async function StudentDashboardPage() {
     }
   }
 
-  // Sample progress (random for now, replace with real studentProgress data when implemented)
-  const sampleProgress: Record<string, number> = {};
-  for (const c of publishedCourses) {
-    sampleProgress[c.id] = Math.floor(Math.random() * 100);
-  }
-
   const initials = getInitials(session.user.name ?? "HV");
-  const avgProgress = publishedCourses.length > 0
-    ? Math.round(
-        publishedCourses.reduce(
-          (acc, c) => acc + (sampleProgress[c.id] || 0),
-          0
-        ) / publishedCourses.length
-      )
-    : 0;
+
+  // Filter out courses with no lessons
+  const coursesWithLessons = publishedCourses.filter((c) => (lessonsMap[c.id] || 0) > 0);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -167,27 +155,10 @@ export default async function StudentDashboardPage() {
 
           {/* Avatar */}
           <div className="flex items-center gap-3">
-            <div className="flex flex-col items-end">
-              <div className="flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1.5">
-                <Trophy className="size-3.5 text-amber-300" />
-                <span className="text-xs font-semibold text-white">
-                  {avgProgress}% hoàn thành
-                </span>
-              </div>
-            </div>
             <div className="flex size-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm border border-white/20 text-lg font-bold text-white shadow-lg">
               {initials}
             </div>
           </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="relative mt-5">
-          <div className="h-2 rounded-full bg-white/20" />
-          <div
-            className="absolute top-0 left-0 h-2 rounded-full bg-gradient-to-r from-amber-300 to-yellow-300 transition-all"
-            style={{ width: `${avgProgress}%` }}
-          />
         </div>
       </div>
 
@@ -279,7 +250,7 @@ export default async function StudentDashboardPage() {
       </div>
 
       {/* ─── COURSES SECTION ─── */}
-      {publishedCourses.length === 0 ? (
+      {coursesWithLessons.length === 0 ? (
         /* Empty state */
         <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 py-24 text-center">
           <div className="flex size-16 items-center justify-center rounded-2xl bg-slate-100 mb-5 shadow-inner">
@@ -302,7 +273,7 @@ export default async function StudentDashboardPage() {
               </div>
               <h2 className="text-base font-bold text-slate-900">Khóa học có sẵn</h2>
               <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
-                {publishedCourses.length}
+                {coursesWithLessons.length}
               </span>
             </div>
             {isSubscriptionActive ? (
@@ -320,8 +291,7 @@ export default async function StudentDashboardPage() {
 
           {/* Course grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {publishedCourses.map((courseItem) => {
-              const progress = sampleProgress[courseItem.id] || 0;
+            {coursesWithLessons.map((courseItem) => {
               const modules = modulesMap[courseItem.id] || 0;
               const lessons = lessonsMap[courseItem.id] || 0;
 
@@ -355,19 +325,6 @@ export default async function StudentDashboardPage() {
                     <span className="absolute top-3 left-3 rounded-lg bg-white/90 backdrop-blur-sm px-2.5 py-1 text-xs font-bold text-indigo-600 shadow-sm">
                       {courseItem.level}
                     </span>
-
-                    {/* Progress pill */}
-                    <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                      <div className="h-1.5 w-20 rounded-full bg-white/30 backdrop-blur-sm overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-amber-300 to-yellow-300 transition-all duration-500"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      <span className="rounded-lg bg-black/40 backdrop-blur-sm px-2 py-0.5 text-xs font-semibold text-white">
-                        {progress}%
-                      </span>
-                    </div>
                   </div>
 
                   {/* Course info */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { CheckCircle2, FileQuestion, AlertCircle, ArrowRight, RotateCcw, Trophy, X } from "lucide-react";
+import { CheckCircle2, FileQuestion, AlertCircle, ArrowRight, RotateCcw, Trophy, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface QuizQuestion {
@@ -261,6 +261,17 @@ export function QuizLesson({
           </span>
         </div>
         <h1 className="text-2xl font-bold text-slate-900 mb-4">{title}</h1>
+
+        {/* Warning Banner */}
+        <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 p-4">
+          <AlertTriangle className="size-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800">Lưu ý quan trọng</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Bài làm quiz <strong>không được lưu tạm</strong>. Nếu tải lại trang, đóng trình duyệt hoặc mất kết nối mạng, bạn sẽ phải làm lại từ đầu. Hãy đảm bảo kết nối internet ổn định trước khi bắt đầu!
+            </p>
+          </div>
+        </div>
 
         {/* Progress */}
         <div className="flex items-center gap-4">

@@ -2,30 +2,19 @@
 
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import {
   GraduationCap,
-  Bell,
   BookOpen,
-  Settings,
   LogOut,
-  User,
-  Shield,
-  CreditCard,
   ShieldAlert,
   Sparkles,
   Crown,
-  LayoutDashboard,
+  CreditCard,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 interface StudentHeaderClientProps {
   user: {
@@ -48,6 +37,7 @@ function getInitials(name: string) {
 
 export function StudentHeaderClient({ user }: StudentHeaderClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
   // Xác định trạng thái thời hạn thực tế của gói dịch vụ trả phí
   const isPlanActive =
@@ -77,7 +67,7 @@ export function StudentHeaderClient({ user }: StudentHeaderClientProps) {
       <div className="flex w-full items-center justify-between gap-8">
         {/* Left: Logo + Nav */}
         <div className="flex items-center gap-10">
-          <Link href="/account" className="flex items-center gap-2.5 group">
+          <Link href="/dashboard" className="flex items-center gap-2.5 group">
             <div className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/25 transition-transform group-hover:scale-105">
               <GraduationCap className="size-4 text-white" />
             </div>
@@ -88,26 +78,32 @@ export function StudentHeaderClient({ user }: StudentHeaderClientProps) {
 
           <nav className="hidden md:flex items-center gap-1">
             {[
-              { href: "/account" as const, label: "Tài khoản", icon: Crown, active: false },
-              { href: "/courses" as const, label: "Khóa học", icon: BookOpen, active: false },
-              { href: "/notebook" as const, label: "Sổ từ vựng", icon: null, active: false },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                  item.active
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                {item.icon && <item.icon className="size-4" />}
-                {item.label}
-                {item.active && (
-                  <span className="absolute -bottom-[17px] left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-indigo-500" />
-                )}
-              </Link>
-            ))}
+              { href: "/account" as const, label: "Tài khoản", icon: Crown },
+              { href: "/courses" as const, label: "Khóa học", icon: BookOpen, alsoActiveOn: ["/learn"] },
+              { href: "/notebook" as const, label: "Sổ từ vựng", icon: null },
+            ].map((item) => {
+              const isActive =
+                pathname === item.href ||
+                pathname.startsWith(item.href + "/") ||
+                (item.alsoActiveOn?.some((path) => pathname.startsWith(path)) ?? false);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                    isActive
+                      ? "bg-indigo-50 text-indigo-700"
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  {item.icon && <item.icon className="size-4" />}
+                  {item.label}
+                  {isActive && (
+                    <span className="absolute -bottom-[17px] left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-indigo-500" />
+                  )}
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
@@ -142,74 +138,30 @@ export function StudentHeaderClient({ user }: StudentHeaderClientProps) {
             </Link>
           )}
 
-          {/* Notifications bell */}
-          <button
-            aria-label="Thông báo"
-            className="relative flex size-9 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
-          >
-            <Bell className="size-5" />
-            <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-red-500 ring-2 ring-white" />
-          </button>
-
-          {/* User menu with real sign-out */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-2.5 rounded-xl px-1.5 py-1 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none">
-              <Avatar size="sm">
-                <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-500 text-white text-xs font-bold">
-                  {user ? getInitials(user.name ?? "HV") : "HV"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="hidden sm:block text-left">
-                <p className="text-sm font-semibold text-slate-900 leading-tight">
-                  {user?.name ?? "Học viên"}
-                </p>
-                <p className="text-[11px] text-slate-400 leading-tight">
-                  {user?.email ?? ""}
-                </p>
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} className="w-52">
-              <div className="px-2 py-2.5 border-b border-border mb-1">
-                <p className="text-sm font-semibold text-foreground">
-                  {user?.name}
-                </p>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
-              </div>
-              {user?.role === "admin" && (
-                <>
-                  <Link
-                    href="/admin/dashboard"
-                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                  >
-                    <LayoutDashboard className="mr-2 size-4 text-indigo-500" />
-                    Bảng điều khiển Admin
-                  </Link>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuItem className="gap-2 py-2">
-                <User className="size-4 text-slate-500" />
-                Hồ sơ cá nhân
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 py-2">
-                <Settings className="size-4 text-slate-500" />
-                Cài đặt
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 py-2">
-                <Shield className="size-4 text-slate-500" />
-                Quyền riêng tư
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                className="gap-2 py-2 cursor-pointer"
-                onClick={handleSignOut}
-              >
-                <LogOut className="size-4" />
-                Đăng xuất
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* User info + Sign out button */}
+          <div className="flex items-center gap-3">
+            <Avatar size="sm">
+              <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-500 text-white text-xs font-bold">
+                {user ? getInitials(user.name ?? "HV") : "HV"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="hidden sm:block text-left">
+              <p className="text-sm font-semibold text-slate-900 leading-tight">
+                {user?.name ?? "Học viên"}
+              </p>
+              <p className="text-[11px] text-slate-400 leading-tight">
+                {user?.email ?? ""}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="ml-2 text-red-500 hover:text-red-600"
+            >
+              <LogOut className="size-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </header>

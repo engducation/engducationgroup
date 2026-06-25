@@ -8,7 +8,6 @@ import {
   CreditCard,
   Check,
   Loader2,
-  ArrowRight,
   Sparkles,
   Calendar,
   Clock,
@@ -18,6 +17,8 @@ import {
   ChevronRight,
   User,
   Mail,
+  ArrowRight,
+  UserCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +30,6 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChangePasswordSection } from "@/components/change-password-section";
 import { useCreateOrder } from "@/features/payment/hooks/use-create-order";
 import { PACKAGES, type PackageInfo } from "@/features/payment/services/packages";
 import type { PackageType } from "@/features/payment/types/schemas";
@@ -200,8 +200,28 @@ export function AccountClient({
         </CardContent>
       </Card>
 
-      {/* Change Password Section */}
-      <ChangePasswordSection />
+      {/* Quick Link to Profile */}
+      <a href="/profile">
+        <Card className="hover:shadow-lg transition-all cursor-pointer group border-dashed border-2 border-slate-200 hover:border-indigo-300 bg-slate-50/50 hover:bg-indigo-50/30">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex size-11 items-center justify-center rounded-xl bg-indigo-100 group-hover:bg-indigo-200 transition-colors">
+                <UserCircle className="size-5 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                  Hồ sơ cá nhân
+                  <span className="text-xs font-medium text-slate-500 group-hover:text-indigo-600 transition-colors">
+                    Cập nhật thông tin & đổi mật khẩu
+                  </span>
+                </h3>
+                <p className="text-sm text-slate-500">Quản lý thông tin cá nhân và bảo mật tài khoản</p>
+              </div>
+            </div>
+            <ChevronRight className="size-5 text-slate-400 group-hover:translate-x-1 group-hover:text-indigo-500 transition-all" />
+          </CardContent>
+        </Card>
+      </a>
 
       {/* Upgrade Section - Only show if not premium */}
       {!isPremium && (

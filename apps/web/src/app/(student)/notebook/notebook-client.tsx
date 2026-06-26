@@ -3,12 +3,11 @@
 /**
  * Student Notebook Client - Sổ từ vựng cá nhân
  *
- * Premium design features:
- * - CollectionSidebar: quick filters (All/Due/Mastered), collections, tags
- * - BulkActionBar: multi-select → remove, mark mastered, add to collection
- * - VocabularyCard: collapsible details (tags, notes, collections)
- * - Search + Sort (6 options)
- * - Keyboard shortcuts: / Esc ? D M
+ * Features:
+ * - CollectionSidebar: collections, tags
+ * - VocabularyCard: collapsible details (tags, notes, collections), status badges
+ * - Search + Sort
+ * - Keyboard shortcuts: / Esc ? D
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -16,9 +15,6 @@ import {
   BookOpen,
   Loader2,
   Trash2,
-  Sparkles,
-  Clock,
-  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useVocabulary } from "@/features/vocabulary/hooks/useVocabulary";
@@ -67,12 +63,9 @@ export default function NotebookClient() {
     loadCollections,
     loadTags,
     bulkRemove,
-    bulkMarkMastered,
     bulkAddToCollection,
     updateTags,
     updateNote,
-    markMastered,
-    unmarkMastered,
     createCollection,
     addToCollection,
     removeFromCollection,
@@ -97,12 +90,6 @@ export default function NotebookClient() {
   const debouncedSearch = useDebouncedValue(searchInput, 300);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // ── Derived counts ──────────────────────────────────────────────────────
-  const masteredCount = useMemo(
-    () => notebook.filter((e) => e.masteredAt !== null).length,
-    [notebook],
-  );
-
   // ── Load data on mount ─────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -124,15 +111,9 @@ export default function NotebookClient() {
   }, [error]);
 
   // ── Keyboard shortcuts ─────────────────────────────────────────────────
-  const selectedArray = useMemo(
-    () => Array.from(selectedIds),
-    [selectedIds],
-  );
-
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      // Don't hijack inputs/textareas
       if (
         target.tagName === "INPUT" ||
         target.tagName === "TEXTAREA" ||
@@ -170,21 +151,9 @@ export default function NotebookClient() {
             if (first) setPendingDelete(first);
           }
           break;
-        case "m":
-        case "M":
-          if (selectedIds.size > 0) {
-            e.preventDefault();
-            void bulkMarkMastered(selectedArray, true).then((r) => {
-              if (r.success) {
-                toast.success(`Đã đánh dấu ${selectedIds.size} từ là đã thuộc`);
-                setSelectedIds(new Set());
-              }
-            });
-          }
-          break;
       }
     },
-    [selectedIds, showShortcuts, selectedArray, notebook, bulkMarkMastered],
+    [selectedIds, showShortcuts, notebook],
   );
 
   useEffect(() => {
@@ -197,27 +166,15 @@ export default function NotebookClient() {
     const query = debouncedSearch.trim().toLowerCase();
     let result = notebook;
 
-    // ── Status filter (only one of these runs) ──
-    if (collectionFilter.kind === "due") {
-      // "Cần ôn": từ vựng CHƯA thuộc và đến hạn ôn
-      result = result.filter(
-        (e) =>
-          e.masteredAt == null &&
-          e.review != null &&
-          new Date(e.review.dueAt).getTime() <= Date.now(),
-      );
-    } else if (collectionFilter.kind === "mastered") {
-      // "Đã thuộc": từ vựng đã được đánh dấu thuộc
-      result = result.filter((e) => e.masteredAt != null);
-    } else if (collectionFilter.kind === "collection") {
-      // Filter by specific collection
+    // ── Collection filter ──
+    if (collectionFilter.kind === "collection") {
       const collectionId = collectionFilter.id;
       result = result.filter((e) => {
         const entryCollections = (e.collections ?? []) as string[];
         return entryCollections.includes(collectionId);
       });
     }
-    // "all": hiển thị tất cả (không filter theo status)
+
     // ── Tag filter ──
     if (activeTag) {
       result = result.filter((e) => (e.tags ?? []).includes(activeTag));
@@ -233,12 +190,7 @@ export default function NotebookClient() {
     }
 
     return result;
-  }, [
-    notebook,
-    debouncedSearch,
-    collectionFilter,
-    activeTag,
-  ]);
+  }, [notebook, debouncedSearch, collectionFilter, activeTag]);
 
   const sortedNotebook = useMemo(() => {
     const arr = [...filteredNotebook];
@@ -367,38 +319,6 @@ export default function NotebookClient() {
     }
   }, [pendingDelete, selectedIds, bulkRemove]);
 
-  const handleMarkMastered = useCallback(
-    async (vocabId: string) => {
-      const entry = notebook.find((e) => e.vocabulary.id === vocabId);
-      if (!entry) return;
-      if (entry.masteredAt) {
-        await unmarkMastered(vocabId);
-      } else {
-        await markMastered(vocabId);
-      }
-    },
-    [notebook, markMastered, unmarkMastered],
-  );
-
-  const handleBulkMarkMastered = useCallback(
-    async (mastered: boolean) => {
-      if (selectedIds.size === 0) return { success: true };
-      const r = await bulkMarkMastered(Array.from(selectedIds), mastered);
-      if (r.success) {
-        toast.success(
-          mastered
-            ? `Đã đánh dấu ${selectedIds.size} từ là đã thuộc`
-            : `Đã bỏ đánh dấu ${selectedIds.size} từ`,
-        );
-        setSelectedIds(new Set());
-      } else {
-        toast.error(r.error ?? "Lỗi khi cập nhật");
-      }
-      return r;
-    },
-    [selectedIds, bulkMarkMastered],
-  );
-
   const handleBulkRemove = useCallback(async () => {
     if (selectedIds.size === 0) return { success: true };
     const r = await bulkRemove(Array.from(selectedIds));
@@ -501,9 +421,7 @@ export default function NotebookClient() {
             <CollectionSidebar
               collections={collections}
               activeFilter={collectionFilter}
-              dueCount={dueCount}
               totalCount={notebook.length}
-              masteredCount={masteredCount}
               onSelect={setCollectionFilter}
               onCreateCollection={handleCreateCollectionSidebar}
               onDeleteCollection={handleDeleteCollection}
@@ -553,24 +471,6 @@ export default function NotebookClient() {
                   <BookOpen className="size-4 mr-1.5" />
                   {notebook.length} từ đã lưu
                 </Badge>
-                {dueCount > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-2 text-sm font-semibold text-amber-700 border-amber-200/50 shadow-sm animate-pulse-soft"
-                  >
-                    <Clock className="size-4 mr-1.5" />
-                    {dueCount} cần ôn
-                  </Badge>
-                )}
-                {masteredCount > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="rounded-xl bg-gradient-to-r from-emerald-50 to-green-50 px-4 py-2 text-sm font-semibold text-emerald-700 border-emerald-200/50 shadow-sm"
-                  >
-                    <Star className="size-4 mr-1.5 fill-current" />
-                    {masteredCount} đã thuộc
-                  </Badge>
-                )}
               </div>
             </div>
           </header>
@@ -650,9 +550,6 @@ export default function NotebookClient() {
                         toggleSelection(entry.vocabulary.id)
                       }
                       onRequestDelete={() => requestDelete(entry)}
-                      onToggleMastered={() =>
-                        handleMarkMastered(entry.vocabulary.id)
-                      }
                       onUpdateTags={(vocabularyId: string, next: string[]) =>
                         updateTags(vocabularyId, next)
                       }
@@ -699,7 +596,6 @@ export default function NotebookClient() {
         collections={collections}
         onClear={() => setSelectedIds(new Set())}
         onRemove={handleBulkRemove}
-        onMarkMastered={handleBulkMarkMastered}
         onAddToCollection={handleBulkAddToCollection}
       />
 
@@ -791,7 +687,7 @@ export default function NotebookClient() {
                 variant="destructive"
                 onClick={confirmDeleteCollection}
                 disabled={isDeleting}
-                className="rounded-xl bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-lg shadow-red-500/25"
+                className="rounded-xl bg-gradient-to-r from-white-500 to-white-500 hover:from-white-600 hover:to-white-600 shadow-lg shadow-red-500/25"
               >
                 {isDeleting ? (
                   <>

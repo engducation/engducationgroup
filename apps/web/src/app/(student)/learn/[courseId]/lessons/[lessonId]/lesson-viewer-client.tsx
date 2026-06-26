@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { LessonSidebar } from "@/components/lesson-sidebar";
@@ -9,6 +9,7 @@ import { TextLesson } from "@/components/lessons/text-lesson";
 import { QuizLesson } from "@/components/lessons/quiz-lesson";
 import { VocabularyLesson } from "@/components/lessons/vocabulary-lesson";
 import { WritingLesson } from "@/components/lessons/writing-lesson";
+import { useVocabulary } from "@/features/vocabulary/hooks/useVocabulary";
 
 interface Module {
   id: string;
@@ -104,6 +105,94 @@ export function LessonViewerClient({
   // Avoid duplicate POSTs if a user double-clicks an "Hoàn thành" button
   // while the network request is still in flight.
   const inFlightRef = useRef<Set<string>>(new Set());
+
+  // Notebook state for vocabulary lessons: tracks which inline lesson items
+  // are already saved to the user's notebook, so the flashcard can show a
+  // "Đã lưu" state without an extra round-trip per card.
+  const { notebook, loadNotebook, saveLessonItemToNotebook } = useVocabulary();
+
+  const savedWordKeys = useMemo(() => {
+    const set = new Set<string>();
+    for (const entry of notebook) {
+      const v = entry.vocabulary;
+      set.add(`${v.word.trim().toLowerCase()}|${v.partOfSpeech.trim().toLowerCase()}`);
+    }
+    return set;
+  }, [notebook]);
+
+  const isLessonVocabSaved = useCallback(
+    (item: { word: string; partOfSpeech: string }) =>
+      savedWordKeys.has(
+        `${item.word.trim().toLowerCase()}|${item.partOfSpeech.trim().toLowerCase()}`,
+      ),
+    [savedWordKeys],
+  );
+
+  // Track which flashcard the user has just saved so the UI flips to
+  // "Đã lưu" without waiting for `loadNotebook` to complete.
+  const [locallySavedIds, setLocallySavedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  const handleAddLessonVocabToNotebook = useCallback(
+    async (item: {
+      id: string;
+      word: string;
+      partOfSpeech: string;
+    }) => {
+      if (locallySavedIds.has(item.id) || isLessonVocabSaved(item)) {
+        toast.info(`"${item.word}" đã có trong sổ từ vựng`);
+        return;
+      }
+
+      // Optimistic: flip the UI immediately.
+      setLocallySavedIds((prev) => {
+        const next = new Set(prev);
+        next.add(item.id);
+        return next;
+      });
+
+      try {
+        const ok = await saveLessonItemToNotebook(item.id);
+        if (ok) {
+          toast.success(`Đã lưu "${item.word}" vào sổ từ vựng`);
+          // Refresh the notebook list so subsequent cards reflect the save
+          // and the dedupe key set is up to date.
+          await loadNotebook();
+        } else {
+          // Revert optimistic update on failure.
+          setLocallySavedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(item.id);
+            return next;
+          });
+          toast.error("Không thể lưu từ vựng. Vui lòng thử lại.");
+        }
+      } catch (err) {
+        setLocallySavedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(item.id);
+          return next;
+        });
+        toast.error(
+          err instanceof Error ? err.message : "Đã xảy ra lỗi khi lưu từ vựng",
+        );
+      }
+    },
+    [
+      isLessonVocabSaved,
+      loadNotebook,
+      locallySavedIds,
+      saveLessonItemToNotebook,
+    ],
+  );
+
+  // Load notebook once when the lesson viewer mounts so the saved-state
+  // indicator is accurate even on cold navigation.
+  useEffect(() => {
+    void loadNotebook();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const markCompleted = useCallback(
     async (type: "video" | "read" | "quiz" | "writing" | "vocabulary") => {
@@ -252,6 +341,10 @@ export function LessonViewerClient({
           items={currentLesson.content.items || []}
           isCompleted={progress.vocabularyReviewed}
           onComplete={handleVocabularyComplete}
+          onAddToNotebook={handleAddLessonVocabToNotebook}
+          isItemSaved={(item) =>
+            locallySavedIds.has(item.id) || isLessonVocabSaved(item)
+          }
         />
       );
     }

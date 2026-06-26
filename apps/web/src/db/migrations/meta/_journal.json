@@ -85,6 +85,13 @@
       "when": 1751361600000,
       "tag": "0011_add_pricing_and_voucher_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1751860800000,
+      "tag": "0012_notebook_phase2",
+      "breakpoints": true
     }
   ]
 }

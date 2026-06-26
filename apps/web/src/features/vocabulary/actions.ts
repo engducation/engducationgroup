@@ -222,6 +222,32 @@ export async function saveVocabularyToNotebook(vocabularyId: string): Promise<Ac
   return result;
 }
 
+/**
+ * Save a lesson's inline vocabulary item to the user's personal notebook.
+ *
+ * The notebook only stores references to the global `vocabulary` table, so
+ * this action first ensures the inline item is mirrored into `vocabulary`
+ * (idempotent by word + partOfSpeech), then creates the userVocabulary link.
+ */
+export async function saveLessonVocabItemToNotebook(
+  lessonVocabularyItemId: string,
+): Promise<ActionResult> {
+  const userId = await requireAuth();
+
+  const ensured = await vocabService.ensureLessonVocabToGlobalVocabulary(
+    lessonVocabularyItemId,
+  );
+  if (!ensured.success) {
+    return { success: false, error: ensured.error };
+  }
+  const vocabularyId = ensured.data.vocabularyId;
+
+  const result = await vocabService.saveToNotebook(userId, vocabularyId);
+  revalidatePath("/learn/vocabulary");
+  revalidatePath("/learn/notebook");
+  return result;
+}
+
 export async function removeVocabularyFromNotebook(vocabularyId: string): Promise<ActionResult> {
   const userId = await requireAuth();
   const result = await vocabService.removeFromNotebook(userId, vocabularyId);

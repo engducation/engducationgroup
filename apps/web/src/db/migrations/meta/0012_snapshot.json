@@ -1,0 +1,271 @@
+{
+  "id": "0012_notebook_phase2",
+  "prevId": "0011_add_pricing_and_voucher_tables",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "package_pricing": {
+      "name": "package_pricing",
+      "schema": "",
+      "columns": {
+        "package_type": { "name": "package_type", "type": "varchar(20)", "primaryKey": true, "nullable": false },
+        "current_price": { "name": "current_price", "type": "integer", "primaryKey": false, "nullable": false },
+        "base_price": { "name": "base_price", "type": "integer", "primaryKey": false, "nullable": false },
+        "discount_percent": { "name": "discount_percent", "type": "integer", "primaryKey": false, "nullable": false, "default": 0 },
+        "custom_label": { "name": "custom_label", "type": "varchar(100)", "primaryKey": false, "nullable": true },
+        "custom_description": { "name": "custom_description", "type": "text", "primaryKey": false, "nullable": true },
+        "is_enabled": { "name": "is_enabled", "type": "integer", "primaryKey": false, "nullable": false, "default": 1 },
+        "discount_starts_at": { "name": "discount_starts_at", "type": "timestamp", "primaryKey": false, "nullable": true },
+        "discount_ends_at": { "name": "discount_ends_at", "type": "timestamp", "primaryKey": false, "nullable": true },
+        "admin_note": { "name": "admin_note", "type": "text", "primaryKey": false, "nullable": true },
+        "updated_at": { "name": "updated_at", "type": "timestamp", "primaryKey": false, "nullable": false }
+      },
+      "indexes": {
+        "package_pricing_enabled_idx": {
+          "name": "package_pricing_enabled_idx",
+          "columns": ["is_enabled"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "checks": {},
+      "compositePrimaryKeys": {}
+    },
+    "voucher": {
+      "name": "voucher",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "nullable": false },
+        "code": { "name": "code", "type": "varchar(50)", "primaryKey": false, "nullable": false },
+        "type": { "name": "type", "type": "varchar(20)", "primaryKey": false, "nullable": false },
+        "value": { "name": "value", "type": "integer", "primaryKey": false, "nullable": false },
+        "max_discount": { "name": "max_discount", "type": "integer", "primaryKey": false, "nullable": true },
+        "max_usage": { "name": "max_usage", "type": "integer", "primaryKey": false, "nullable": true },
+        "used_count": { "name": "used_count", "type": "integer", "primaryKey": false, "nullable": false, "default": 0 },
+        "min_order_amount": { "name": "min_order_amount", "type": "integer", "primaryKey": false, "nullable": false, "default": 0 },
+        "applicable_packages": { "name": "applicable_packages", "type": "text", "primaryKey": false, "nullable": true },
+        "is_active": { "name": "is_active", "type": "integer", "primaryKey": false, "nullable": false, "default": 1 },
+        "starts_at": { "name": "starts_at", "type": "timestamp", "primaryKey": false, "nullable": true },
+        "expires_at": { "name": "expires_at", "type": "timestamp", "primaryKey": false, "nullable": true },
+        "description": { "name": "description", "type": "text", "primaryKey": false, "nullable": true },
+        "admin_note": { "name": "admin_note", "type": "text", "primaryKey": false, "nullable": true },
+        "created_by": { "name": "created_by", "type": "text", "primaryKey": false, "nullable": true },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "nullable": false },
+        "updated_at": { "name": "updated_at", "type": "timestamp", "primaryKey": false, "nullable": false }
+      },
+      "indexes": {
+        "voucher_code_idx": {
+          "name": "voucher_code_idx",
+          "columns": ["code"],
+          "isUnique": false
+        },
+        "voucher_active_idx": {
+          "name": "voucher_active_idx",
+          "columns": ["is_active"],
+          "isUnique": false
+        },
+        "voucher_expires_idx": {
+          "name": "voucher_expires_idx",
+          "columns": ["expires_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "voucher_created_by_fkey": {
+          "name": "voucher_created_by_fkey",
+          "tableFrom": "voucher",
+          "tableTo": "user",
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
+          "onDelete": "SET NULL"
+        }
+      },
+      "checks": {},
+      "compositePrimaryKeys": {}
+    },
+    "voucher_usage": {
+      "name": "voucher_usage",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "nullable": false },
+        "voucher_id": { "name": "voucher_id", "type": "text", "primaryKey": false, "nullable": false },
+        "user_id": { "name": "user_id", "type": "text", "primaryKey": false, "nullable": false },
+        "order_id": { "name": "order_id", "type": "text", "primaryKey": false, "nullable": true },
+        "discount_amount": { "name": "discount_amount", "type": "integer", "primaryKey": false, "nullable": false },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "nullable": false }
+      },
+      "indexes": {
+        "voucher_usage_voucher_idx": {
+          "name": "voucher_usage_voucher_idx",
+          "columns": ["voucher_id"],
+          "isUnique": false
+        },
+        "voucher_usage_user_idx": {
+          "name": "voucher_usage_user_idx",
+          "columns": ["user_id"],
+          "isUnique": false
+        },
+        "voucher_usage_order_idx": {
+          "name": "voucher_usage_order_idx",
+          "columns": ["order_id"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "voucher_usage_voucher_id_fkey": {
+          "name": "voucher_usage_voucher_id_fkey",
+          "tableFrom": "voucher_usage",
+          "tableTo": "voucher",
+          "columnsFrom": ["voucher_id"],
+          "columnsTo": ["id"],
+          "onDelete": "CASCADE"
+        },
+        "voucher_usage_user_id_fkey": {
+          "name": "voucher_usage_user_id_fkey",
+          "tableFrom": "voucher_usage",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "CASCADE"
+        }
+      },
+      "checks": {},
+      "compositePrimaryKeys": {}
+    },
+    "vocabulary_review": {
+      "name": "vocabulary_review",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "nullable": false },
+        "user_id": { "name": "user_id", "type": "text", "primaryKey": false, "nullable": false },
+        "vocabulary_id": { "name": "vocabulary_id", "type": "text", "primaryKey": false, "nullable": false },
+        "ease_factor": { "name": "ease_factor", "type": "real", "primaryKey": false, "nullable": false, "default": 2.5 },
+        "interval_days": { "name": "interval_days", "type": "integer", "primaryKey": false, "nullable": false, "default": 0 },
+        "repetition": { "name": "repetition", "type": "integer", "primaryKey": false, "nullable": false, "default": 0 },
+        "lapses": { "name": "lapses", "type": "integer", "primaryKey": false, "nullable": false, "default": 0 },
+        "due_at": { "name": "due_at", "type": "timestamp", "primaryKey": false, "nullable": false, "default": "now()" },
+        "last_reviewed_at": { "name": "last_reviewed_at", "type": "timestamp", "primaryKey": false, "nullable": true },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "nullable": false, "default": "now()" },
+        "updated_at": { "name": "updated_at", "type": "timestamp", "primaryKey": false, "nullable": false, "default": "now()" }
+      },
+      "indexes": {
+        "vocabulary_review_user_vocab_unique": {
+          "name": "vocabulary_review_user_vocab_unique",
+          "columns": ["user_id", "vocabulary_id"],
+          "isUnique": true
+        },
+        "vocabulary_review_due_idx": {
+          "name": "vocabulary_review_due_idx",
+          "columns": ["user_id", "due_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "vocabulary_review_user_id_fkey": {
+          "name": "vocabulary_review_user_id_fkey",
+          "tableFrom": "vocabulary_review",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "CASCADE"
+        },
+        "vocabulary_review_vocabulary_id_fkey": {
+          "name": "vocabulary_review_vocabulary_id_fkey",
+          "tableFrom": "vocabulary_review",
+          "tableTo": "vocabulary",
+          "columnsFrom": ["vocabulary_id"],
+          "columnsTo": ["id"],
+          "onDelete": "CASCADE"
+        }
+      },
+      "checks": {},
+      "compositePrimaryKeys": {}
+    },
+    "vocabulary_collection": {
+      "name": "vocabulary_collection",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "nullable": false },
+        "user_id": { "name": "user_id", "type": "text", "primaryKey": false, "nullable": false },
+        "name": { "name": "name", "type": "varchar(100)", "primaryKey": false, "nullable": false },
+        "description": { "name": "description", "type": "text", "primaryKey": false, "nullable": true },
+        "color": { "name": "color", "type": "varchar(20)", "primaryKey": false, "nullable": true },
+        "is_public": { "name": "is_public", "type": "boolean", "primaryKey": false, "nullable": false, "default": false },
+        "share_slug": { "name": "share_slug", "type": "varchar(32)", "primaryKey": false, "nullable": true },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "nullable": false, "default": "now()" },
+        "updated_at": { "name": "updated_at", "type": "timestamp", "primaryKey": false, "nullable": false, "default": "now()" }
+      },
+      "indexes": {
+        "vocabulary_collection_user_idx": {
+          "name": "vocabulary_collection_user_idx",
+          "columns": ["user_id"],
+          "isUnique": false
+        },
+        "vocabulary_collection_user_name_unique": {
+          "name": "vocabulary_collection_user_name_unique",
+          "columns": ["user_id", "name"],
+          "isUnique": true
+        },
+        "vocabulary_collection_share_slug_unique": {
+          "name": "vocabulary_collection_share_slug_unique",
+          "columns": ["share_slug"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "vocabulary_collection_user_id_fkey": {
+          "name": "vocabulary_collection_user_id_fkey",
+          "tableFrom": "vocabulary_collection",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "CASCADE"
+        }
+      },
+      "checks": {},
+      "compositePrimaryKeys": {}
+    },
+    "user_vocabulary_collection": {
+      "name": "user_vocabulary_collection",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "nullable": false },
+        "user_vocabulary_id": { "name": "user_vocabulary_id", "type": "text", "primaryKey": false, "nullable": false },
+        "collection_id": { "name": "collection_id", "type": "text", "primaryKey": false, "nullable": false },
+        "added_at": { "name": "added_at", "type": "timestamp", "primaryKey": false, "nullable": false, "default": "now()" }
+      },
+      "indexes": {
+        "user_vocab_collection_unique": {
+          "name": "user_vocab_collection_unique",
+          "columns": ["user_vocabulary_id", "collection_id"],
+          "isUnique": true
+        },
+        "user_vocab_collection_collection_idx": {
+          "name": "user_vocab_collection_collection_idx",
+          "columns": ["collection_id"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "user_vocabulary_collection_user_vocabulary_id_fkey": {
+          "name": "user_vocabulary_collection_user_vocabulary_id_fkey",
+          "tableFrom": "user_vocabulary_collection",
+          "tableTo": "user_vocabulary",
+          "columnsFrom": ["user_vocabulary_id"],
+          "columnsTo": ["id"],
+          "onDelete": "CASCADE"
+        },
+        "user_vocabulary_collection_collection_id_fkey": {
+          "name": "user_vocabulary_collection_collection_id_fkey",
+          "tableFrom": "user_vocabulary_collection",
+          "tableTo": "vocabulary_collection",
+          "columnsFrom": ["collection_id"],
+          "columnsTo": ["id"],
+          "onDelete": "CASCADE"
+        }
+      },
+      "checks": {},
+      "compositePrimaryKeys": {}
+    }
+  }
+}

@@ -3,7 +3,9 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -341,11 +343,102 @@ export const userVocabulary = pgTable(
       .notNull()
       .references(() => vocabulary.id, { onDelete: "cascade" }),
     savedAt: timestamp("saved_at").defaultNow().notNull(),
+    // Phase 2 additions
+    tags: jsonb("tags").$type<string[]>().default([]).notNull(),
+    note: text("note"),
+    masteredAt: timestamp("mastered_at"),
   },
   (table) => [
     index("user_vocabulary_user_idx").on(table.userId),
     index("user_vocabulary_vocab_idx").on(table.vocabularyId),
     uniqueIndex("user_vocabulary_unique").on(table.userId, table.vocabularyId),
+    index("user_vocabulary_mastered_idx").on(table.userId, table.masteredAt),
+  ],
+);
+
+// ─── Vocabulary Review (SRS) ────────────────────────────────────────────────
+
+export const vocabularyReview = pgTable(
+  "vocabulary_review",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    vocabularyId: text("vocabulary_id")
+      .notNull()
+      .references(() => vocabulary.id, { onDelete: "cascade" }),
+    easeFactor: real("ease_factor").default(2.5).notNull(),
+    intervalDays: integer("interval_days").default(0).notNull(),
+    repetition: integer("repetition").default(0).notNull(),
+    lapses: integer("lapses").default(0).notNull(),
+    dueAt: timestamp("due_at").defaultNow().notNull(),
+    lastReviewedAt: timestamp("last_reviewed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("vocabulary_review_user_vocab_unique").on(
+      table.userId,
+      table.vocabularyId,
+    ),
+    index("vocabulary_review_due_idx").on(table.userId, table.dueAt),
+  ],
+);
+
+// ─── Vocabulary Collection (User-created folder) ───────────────────────────
+
+export const vocabularyCollection = pgTable(
+  "vocabulary_collection",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description"),
+    color: varchar("color", { length: 20 }),
+    isPublic: boolean("is_public").default(false).notNull(),
+    shareSlug: varchar("share_slug", { length: 32 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("vocabulary_collection_user_idx").on(table.userId),
+    uniqueIndex("vocabulary_collection_user_name_unique").on(
+      table.userId,
+      table.name,
+    ),
+    uniqueIndex("vocabulary_collection_share_slug_unique").on(table.shareSlug),
+  ],
+);
+
+// ─── User Vocabulary ↔ Collection (n-n join) ────────────────────────────────
+
+export const userVocabularyCollection = pgTable(
+  "user_vocabulary_collection",
+  {
+    id: text("id").primaryKey(),
+    userVocabularyId: text("user_vocabulary_id")
+      .notNull()
+      .references(() => userVocabulary.id, { onDelete: "cascade" }),
+    collectionId: text("collection_id")
+      .notNull()
+      .references(() => vocabularyCollection.id, { onDelete: "cascade" }),
+    addedAt: timestamp("added_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("user_vocab_collection_unique").on(
+      table.userVocabularyId,
+      table.collectionId,
+    ),
+    index("user_vocab_collection_collection_idx").on(table.collectionId),
   ],
 );
 
@@ -564,7 +657,7 @@ export const lessonVocabularyRelations = relations(lessonVocabulary, ({ one }) =
   }),
 }));
 
-export const userVocabularyRelations = relations(userVocabulary, ({ one }) => ({
+export const userVocabularyRelations = relations(userVocabulary, ({ one, many }) => ({
   user: one(user, {
     fields: [userVocabulary.userId],
     references: [user.id],
@@ -573,7 +666,48 @@ export const userVocabularyRelations = relations(userVocabulary, ({ one }) => ({
     fields: [userVocabulary.vocabularyId],
     references: [vocabulary.id],
   }),
+  review: one(vocabularyReview, {
+    fields: [userVocabulary.vocabularyId],
+    references: [vocabularyReview.vocabularyId],
+  }),
+  collectionLinks: many(userVocabularyCollection),
 }));
+
+export const vocabularyReviewRelations = relations(vocabularyReview, ({ one }) => ({
+  user: one(user, {
+    fields: [vocabularyReview.userId],
+    references: [user.id],
+  }),
+  vocabulary: one(vocabulary, {
+    fields: [vocabularyReview.vocabularyId],
+    references: [vocabulary.id],
+  }),
+}));
+
+export const vocabularyCollectionRelations = relations(
+  vocabularyCollection,
+  ({ one, many }) => ({
+    user: one(user, {
+      fields: [vocabularyCollection.userId],
+      references: [user.id],
+    }),
+    itemLinks: many(userVocabularyCollection),
+  }),
+);
+
+export const userVocabularyCollectionRelations = relations(
+  userVocabularyCollection,
+  ({ one }) => ({
+    userVocabulary: one(userVocabulary, {
+      fields: [userVocabularyCollection.userVocabularyId],
+      references: [userVocabulary.id],
+    }),
+    collection: one(vocabularyCollection, {
+      fields: [userVocabularyCollection.collectionId],
+      references: [vocabularyCollection.id],
+    }),
+  }),
+);
 
 export const courseReviewRelations = relations(courseReview, ({ one }) => ({
   course: one(course, {

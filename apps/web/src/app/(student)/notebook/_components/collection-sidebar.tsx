@@ -1,22 +1,16 @@
 "use client";
 
 /**
- * CollectionSidebar
+ * CollectionSidebar - Simplified
  *
- * Left sidebar with quick filters and collections.
- * Premium design with glassmorphism, smooth animations, and visual depth.
+ * Left sidebar with collections and tags only.
+ * No status filters, no practice shortcuts.
  */
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
-  Bookmark,
-  CheckCircle2,
-  Clock,
   Folder,
-  Layers,
   Plus,
-  Sparkles,
   BookMarked,
   Trash2,
 } from "lucide-react";
@@ -31,17 +25,13 @@ import type { VocabularyCollection } from "@/features/vocabulary/hooks/useVocabu
 
 export type CollectionFilterId =
   | { kind: "all" }
-  | { kind: "due" }
-  | { kind: "mastered" }
   | { kind: "collection"; id: string }
   | { kind: "tag"; tag: string };
 
 export function CollectionSidebar({
   collections,
   activeFilter,
-  dueCount,
   totalCount,
-  masteredCount,
   onSelect,
   onCreateCollection,
   onDeleteCollection,
@@ -51,9 +41,7 @@ export function CollectionSidebar({
 }: {
   collections: VocabularyCollection[];
   activeFilter: CollectionFilterId;
-  dueCount: number;
   totalCount: number;
-  masteredCount: number;
   onSelect: (filter: CollectionFilterId) => void;
   onCreateCollection: (name: string) => Promise<void>;
   onDeleteCollection?: (collection: VocabularyCollection) => void;
@@ -93,61 +81,31 @@ export function CollectionSidebar({
         </div>
       </div>
 
-      {/* Practice shortcuts */}
-      <div className="space-y-1.5">
-        <div className="mb-3 px-1 text-xs font-bold uppercase tracking-widest text-slate-400">
-          Luyện tập
-        </div>
-        <SidebarLink
-          icon={<Sparkles className="h-4 w-4 text-purple-500" />}
-          label="Quiz"
-          href="/notebook/quiz"
-        />
-        <SidebarLink
-          icon={<Bookmark className="h-4 w-4 text-blue-500" />}
-          label="Spelling"
-          href="/notebook/spelling"
-        />
-        <SidebarLink
-          icon={<BookMarked className="h-4 w-4 text-teal-500" />}
-          label="Review"
-          href="/notebook/review"
-        />
-      </div>
-
-      {/* Quick status filters */}
-      <div className="space-y-1.5">
-        <div className="mb-3 px-1 text-xs font-bold uppercase tracking-widest text-slate-400">
-          Trạng thái
-        </div>
-        <StatusChip
-          icon={<Clock className="h-3.5 w-3.5 text-amber-500" />}
-          label="Cần ôn"
-          count={dueCount}
-          active={activeFilter.kind === "due"}
-          onClick={() => onSelect({ kind: "due" })}
-          color="amber"
-        />
-        <StatusChip
-          icon={<CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
-          label="Đã thuộc"
-          count={masteredCount}
-          active={activeFilter.kind === "mastered"}
-          onClick={() => onSelect({ kind: "mastered" })}
-          color="emerald"
-        />
-        <StatusChip
-          icon={<Layers className="h-3.5 w-3.5 text-slate-500" />}
-          label="Tất cả"
-          count={totalCount}
-          active={isAllActive}
-          onClick={() => {
-            onSelect({ kind: "all" });
-            onSelectTag(null);
-          }}
-          color="slate"
-        />
-      </div>
+      {/* "All" link */}
+      <button
+        type="button"
+        onClick={() => {
+          onSelect({ kind: "all" });
+          onSelectTag(null);
+        }}
+        className={cn(
+          "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all duration-200",
+          isAllActive
+            ? "bg-gradient-to-r from-teal-50 to-emerald-50/50 font-semibold text-teal-700 shadow-sm ring-1 ring-teal-200/50"
+            : "hover:bg-slate-50/80 text-slate-600",
+        )}
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-100/60 transition-all duration-200 group-hover:scale-105 group-hover:bg-slate-200/60">
+          <BookMarked className="h-4 w-4 text-teal-600" />
+        </span>
+        <span className="flex-1 font-semibold">Tất cả từ vựng</span>
+        <span className={cn(
+          "rounded-full px-2 py-0.5 text-xs tabular-nums transition-colors",
+          isAllActive ? "bg-teal-100/60 text-teal-600" : "bg-slate-100/60 text-slate-500"
+        )}>
+          {totalCount}
+        </span>
+      </button>
 
       {/* Collections */}
       <div className="space-y-3">
@@ -162,7 +120,7 @@ export function CollectionSidebar({
 
         {/* New collection input */}
         {showNewInput ? (
-          <div className="animate-fadeIn rounded-xl border border-teal-200/60 bg-gradient-to-br from-tealal-50/50 to-emerald-50/30 p-3 shadow-sm">
+          <div className="animate-fadeIn rounded-xl border border-teal-200/60 bg-gradient-to-br from-teal-50/50 to-emerald-50/30 p-3 shadow-sm">
             <div className="mb-2">
               <Input
                 value={newName}
@@ -220,7 +178,7 @@ export function CollectionSidebar({
         {/* Collection list */}
         {collections.length > 0 ? (
           <div className="space-y-1">
-            {collections.map((c, index) => {
+            {collections.map((c) => {
               const active =
                 activeFilter.kind === "collection" && activeFilter.id === c.id;
               return (
@@ -288,7 +246,7 @@ export function CollectionSidebar({
             Tags
           </div>
           <div className="flex flex-wrap gap-2">
-            {tags.map((t, index) => (
+            {tags.map((t) => (
               <button
                 key={t}
                 type="button"
@@ -299,7 +257,6 @@ export function CollectionSidebar({
                     ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/25"
                     : "bg-slate-100/80 text-slate-600 hover:bg-slate-200/80 hover:shadow-sm",
                 )}
-                style={{ animationDelay: `${index * 30}ms` }}
               >
                 #{t}
               </button>
@@ -314,114 +271,13 @@ export function CollectionSidebar({
           <div className="flex size-8 items-center justify-center rounded-lg bg-teal-100/60">
             <BookMarked className="h-4 w-4 text-teal-600" />
           </div>
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Thống kê</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Tổng cộng</span>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="text-center">
-            <div className="text-xl font-bold text-slate-700">{totalCount}</div>
-            <div className="text-xs text-slate-400">Từ vựng</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-amber-600">{dueCount}</div>
-            <div className="text-xs text-slate-400">Cần ôn</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-emerald-600">{masteredCount}</div>
-            <div className="text-xs text-slate-400">Đã thuộc</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-purple-600">{collections.length}</div>
-            <div className="text-xs text-slate-400">Bộ sưu tập</div>
-          </div>
+        <div className="text-center">
+          <div className="text-3xl font-bold text-slate-700">{totalCount}</div>
+          <div className="text-sm text-slate-400">từ vựng</div>
         </div>
       </div>
     </aside>
-  );
-}
-
-function StatusChip({
-  icon,
-  label,
-  count,
-  active,
-  onClick,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  count: number;
-  active: boolean;
-  onClick: () => void;
-  color: "amber" | "emerald" | "slate";
-}) {
-  const colors = {
-    amber: {
-      active: "bg-gradient-to-r from-amber-50 to-orange-50 ring-1 ring-amber-200/50 text-amber-700 shadow-sm",
-      hover: "hover:bg-gradient-to-r hover:from-amber-50/50 hover:to-orange-50/30",
-      icon: "text-amber-500",
-      bg: "bg-amber-100/60",
-    },
-    emerald: {
-      active: "bg-gradient-to-r from-emerald-50 to-green-50 ring-1 ring-emerald-200/50 text-emerald-700 shadow-sm",
-      hover: "hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-green-50/30",
-      icon: "text-emerald-500",
-      bg: "bg-emerald-100/60",
-    },
-    slate: {
-      active: "bg-gradient-to-r from-slate-100 to-slate-50 ring-1 ring-slate-300/50 text-slate-700 shadow-sm",
-      hover: "hover:bg-gradient-to-r hover:from-slate-50/50 hover:to-slate-100/30",
-      icon: "text-slate-500",
-      bg: "bg-slate-100/60",
-    },
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all duration-200",
-        active ? colors[color].active : `text-slate-600 ${colors[color].hover}`,
-        !active && "hover:shadow-sm"
-      )}
-    >
-      <span className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200 group-hover:scale-105",
-        active ? colors[color].bg : "bg-slate-100/60 group-hover:bg-slate-200/60"
-      )}>
-        <span className={colors[color].icon}>{icon}</span>
-      </span>
-      <span className="flex-1 font-semibold">{label}</span>
-      <span className={cn(
-        "rounded-full px-2 py-0.5 text-xs tabular-nums transition-colors",
-        active ? colors[color].bg : "bg-slate-100/60 text-slate-500 group-hover:bg-slate-200/60"
-      )}>
-        {count}
-      </span>
-    </button>
-  );
-}
-
-function SidebarLink({
-  icon,
-  label,
-  href,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  href: string;
-}) {
-  const router = useRouter();
-  return (
-    <button
-      type="button"
-      onClick={() => router.push(href as Parameters<typeof router.push>[0])}
-      className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:bg-slate-50/80 hover:shadow-sm active:scale-[0.98]"
-    >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-100/60 transition-all duration-200 group-hover:scale-105 group-hover:bg-slate-200/60">
-        {icon}
-      </span>
-      <span className="flex-1 text-slate-600 group-hover:text-slate-900">{label}</span>
-    </button>
   );
 }

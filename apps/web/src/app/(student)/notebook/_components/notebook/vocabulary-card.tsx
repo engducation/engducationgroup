@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { Star, StarOff, Trash2, ChevronDown, ChevronUp, FileText, Folder, Sparkles } from "lucide-react";
+import { Star, Trash2, ChevronDown, ChevronUp, FileText, Folder, Sparkles } from "lucide-react";
 import type {
   UserNotebookEntry,
   VocabularyCollection,
@@ -28,7 +28,6 @@ interface VocabularyCardProps {
   isSelected: boolean;
   onToggleSelect: () => void;
   onRequestDelete: () => void;
-  onToggleMastered: () => void;
   onUpdateTags: (
     vocabularyId: string,
     next: string[],
@@ -61,7 +60,6 @@ export function VocabularyCard({
   isSelected,
   onToggleSelect,
   onRequestDelete,
-  onToggleMastered,
   onUpdateTags,
   onUpdateNote,
   onAddToCollection,
@@ -171,16 +169,24 @@ export function VocabularyCard({
 
             {/* Status badges with enhanced styling */}
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              {isMastered && (
-                <Badge className="gap-1.5 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 border-amber-200/50 shadow-sm hover:shadow-md transition-shadow">
+              {isMastered ? (
+                <Badge className="gap-1.5 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 border-amber-200/50 shadow-sm">
                   <Star className="h-3 w-3 fill-current" />
                   <span className="font-semibold">Đã thuộc</span>
                 </Badge>
-              )}
-              {isDue && (
+              ) : isDue ? (
                 <Badge variant="outline" className="gap-1.5 border-amber-300/60 bg-gradient-to-r from-amber-50/80 to-orange-50/80 text-amber-700 shadow-sm">
                   <Sparkles className="h-3 w-3" />
                   <span className="font-medium">Cần ôn</span>
+                </Badge>
+              ) : entry.review ? (
+                <Badge variant="secondary" className="gap-1.5 bg-blue-50 text-blue-600 border-blue-200/50 shadow-sm">
+                  <Sparkles className="h-3 w-3" />
+                  <span className="font-medium">Đang học</span>
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="gap-1.5 bg-slate-100 text-slate-500 border-slate-200/50 shadow-sm">
+                  <span className="font-medium">Mới</span>
                 </Badge>
               )}
               {vocab.topic && (
@@ -215,24 +221,6 @@ export function VocabularyCard({
 
           {/* Actions with enhanced hover */}
           <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-all duration-200 group-hover:opacity-100">
-            <button
-              type="button"
-              onClick={onToggleMastered}
-              aria-label={isMastered ? "Bỏ đánh dấu đã thuộc" : "Đánh dấu đã thuộc"}
-              className={cn(
-                "rounded-xl p-2.5 transition-all duration-200 hover:scale-110 active:scale-95",
-                isMastered
-                  ? "text-amber-500 hover:bg-amber-100 hover:shadow-lg hover:shadow-amber-200/50"
-                  : "text-slate-400 hover:bg-slate-100 hover:text-amber-500",
-              )}
-            >
-              {isMastered ? (
-                <Star className="h-4 w-4 fill-current" />
-              ) : (
-                <StarOff className="h-4 w-4" />
-              )}
-            </button>
-
             <Button
               type="button"
               variant="ghost"

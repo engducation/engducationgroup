@@ -1,8 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, BookOpen, Volume2, ChevronLeft, ChevronRight, Shuffle, RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  BookOpen,
+  Bookmark,
+  BookmarkCheck,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Shuffle,
+  Volume2,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { CollectionPicker } from "@/app/(student)/notebook/_components/collection-picker";
+import type { VocabularyCollection } from "@/features/vocabulary/hooks/useVocabulary";
 
 interface VocabularyItem {
   id: string;
@@ -21,27 +35,88 @@ interface VocabularyLessonProps {
   isCompleted: boolean;
   onComplete: () => void;
   onAddToNotebook?: (item: VocabularyItem) => void;
+  isItemSaved?: (item: VocabularyItem) => boolean;
+  /** Phase 2: collections for CollectionPicker */
+  collections?: VocabularyCollection[];
+  /** Phase 2: collection membership per vocab item (vocabId → string[]) */
+  vocabCollections?: Record<string, string[]>;
+  /** Phase 2: add to collection action */
+  onAddToCollection?: (
+    collectionId: string,
+    vocabId: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  /** Phase 2: remove from collection action */
+  onRemoveFromCollection?: (
+    collectionId: string,
+    vocabId: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  /** Phase 2: create collection action */
+  onCreateCollection?: (input: {
+    name: string;
+  }) => Promise<{ success: boolean; error?: string; data?: VocabularyCollection }>;
+}
+
+interface VocabularyItem {
+  id: string;
+  word: string;
+  phonetic?: string | null;
+  partOfSpeech: string;
+  meaning: string;
+  example?: string | null;
+  notes?: string | null;
+}
+
+interface VocabularyLessonProps {
+  lessonId: string;
+  title: string;
+  items: VocabularyItem[];
+  isCompleted: boolean;
+  onComplete: () => void;
+  onAddToNotebook?: (item: VocabularyItem) => void;
+  isItemSaved?: (item: VocabularyItem) => boolean;
 }
 
 function VocabularyCard({
   item,
   isFlipped,
   onFlip,
-  onAddToNotebook,
+  isSaved,
+  collections,
+  currentCollectionIds,
+  onAddToCollection,
+  onRemoveFromCollection,
+  onCreateCollection,
 }: {
   item: VocabularyItem;
   isFlipped: boolean;
   onFlip: () => void;
-  onAddToNotebook?: (item: VocabularyItem) => void;
+  isSaved?: boolean;
+  collections?: VocabularyCollection[];
+  currentCollectionIds?: string[];
+  onAddToCollection?: (
+    collectionId: string,
+    vocabId: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  onRemoveFromCollection?: (
+    collectionId: string,
+    vocabId: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  onCreateCollection?: (input: {
+    name: string;
+  }) => Promise<{
+    success: boolean;
+    error?: string;
+    data?: VocabularyCollection;
+  }>;
 }) {
   return (
     <div
-      className="relative h-80 cursor-pointer perspective-1000"
+      className="relative h-80 cursor-pointer"
       onClick={onFlip}
     >
       <div
-        className={`absolute inset-0 transition-transform duration-500 transform-style-preserve-3d ${
-          isFlipped ? "rotate-y-180" : ""
+        className={`absolute inset-0 transition-transform duration-500 ${
+          isFlipped ? "" : ""
         }`}
         style={{
           transformStyle: "preserve-3d",
@@ -59,6 +134,15 @@ function VocabularyCard({
           <h2 className="text-4xl font-bold text-center mb-2">{item.word}</h2>
           {item.phonetic && (
             <p className="text-lg text-white/70">{item.phonetic}</p>
+          )}
+          {isSaved && (
+            <span
+              className="mt-4 inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm"
+              title="Đã lưu vào sổ từ vựng"
+            >
+              <BookmarkCheck className="size-3.5" />
+              Đã lưu
+            </span>
           )}
           <p className="text-sm text-white/60 mt-6">Nhấn để xem nghĩa</p>
         </div>
@@ -93,19 +177,37 @@ function VocabularyCard({
             </div>
           )}
 
-          <div className="mt-4 flex justify-center">
-            {onAddToNotebook && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddToNotebook(item);
-                }}
-                className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-              >
-                Lưu vào sổ từ vựng
-              </Button>
+          <div className="mt-4 flex flex-col items-center gap-2">
+            {/* Phase 2: CollectionPicker */}
+            {collections && onAddToCollection && onRemoveFromCollection && onCreateCollection ? (
+              <div onClick={(e) => e.stopPropagation()}>
+                <CollectionPicker
+                  vocabularyId={item.id}
+                  collections={collections}
+                  currentCollectionIds={currentCollectionIds ?? []}
+                  onAdd={onAddToCollection}
+                  onRemove={onRemoveFromCollection}
+                  onCreate={onCreateCollection}
+                />
+              </div>
+            ) : (
+              /* Phase 1 fallback: simple save button */
+              isSaved ? (
+                <div
+                  className="inline-flex h-8 items-center gap-1.5 rounded-none border border-emerald-200 bg-emerald-50 px-3 text-xs font-medium text-emerald-700"
+                  aria-label={`${item.word} đã được lưu vào sổ từ vựng`}
+                >
+                  <BookmarkCheck className="size-4" />
+                  Đã lưu vào sổ từ vựng
+                </div>
+              ) : (
+                <div
+                  className="inline-flex h-8 items-center gap-1.5 rounded-none border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-500"
+                >
+                  <Bookmark className="size-4" />
+                  Nhấn lưu để thêm vào sổ từ vựng
+                </div>
+              )
             )}
           </div>
         </div>
@@ -115,13 +217,20 @@ function VocabularyCard({
 }
 
 export function VocabularyLesson({
-  lessonId,
+  lessonId: _lessonId,
   title,
   items,
   isCompleted,
   onComplete,
-  onAddToNotebook,
+  onAddToNotebook: _onAddToNotebook,
+  isItemSaved: _isItemSaved,
+  collections,
+  vocabCollections,
+  onAddToCollection,
+  onRemoveFromCollection,
+  onCreateCollection,
 }: VocabularyLessonProps) {
+  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [studiedCards, setStudiedCards] = useState<Set<number>>(new Set());
@@ -180,6 +289,11 @@ export function VocabularyLesson({
 
   const studiedCount = studiedCards.size;
   const progressPercent = items.length > 0 ? Math.round((studiedCount / items.length) * 100) : 0;
+  const savedCount = vocabCollections
+    ? Object.keys(vocabCollections).length
+    : _isItemSaved
+      ? items.reduce((acc, item) => (_isItemSaved(item) ? acc + 1 : acc), 0)
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -212,6 +326,15 @@ export function VocabularyLesson({
           <span className="text-sm font-medium text-slate-600 shrink-0">
             {studiedCount}/{items.length}
           </span>
+          {(vocabCollections || _isItemSaved) && (
+            <span
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
+              title="Số từ đã lưu vào sổ từ vựng"
+            >
+              <BookmarkCheck className="size-3.5" />
+              {savedCount}/{items.length} đã lưu
+            </span>
+          )}
         </div>
       </div>
 
@@ -221,7 +344,12 @@ export function VocabularyLesson({
           item={currentItem}
           isFlipped={isFlipped}
           onFlip={flipCard}
-          onAddToNotebook={onAddToNotebook}
+          isSaved={vocabCollections ? (vocabCollections[currentItem.id]?.length ?? 0) > 0 : (_isItemSaved ? _isItemSaved(currentItem) : false)}
+          collections={collections}
+          currentCollectionIds={vocabCollections?.[currentItem.id]}
+          onAddToCollection={onAddToCollection}
+          onRemoveFromCollection={onRemoveFromCollection}
+          onCreateCollection={onCreateCollection}
         />
       </div>
 
@@ -321,6 +449,20 @@ export function VocabularyLesson({
           <p className="text-sm text-emerald-600 mt-1">
             Tiếp tục với bài học tiếp theo để học thêm nhiều từ vựng mới.
           </p>
+          {(vocabCollections || _isItemSaved) && savedCount > 0 && (
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <p className="text-xs text-emerald-700">
+                Bạn đã lưu {savedCount}/{items.length} từ vào sổ từ vựng.
+              </p>
+              <Button
+                onClick={() => router.push("/notebook" as Parameters<typeof router.push>[0])}
+                className="inline-flex h-8 items-center gap-1.5 border border-emerald-200 bg-white px-3 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
+              >
+                <BookOpen className="size-4" />
+                Xem sổ từ vựng
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

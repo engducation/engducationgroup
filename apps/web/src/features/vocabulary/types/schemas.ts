@@ -56,9 +56,105 @@ export type VocabularyWithMeta = Vocabulary & {
   };
 };
 
+/**
+ * UserNotebookEntry — Phase 2 fields added:
+ * - tags, note, masteredAt (mirror DB columns)
+ * - collections: list of collectionIds the word belongs to
+ * - review: optional SRS state (ease, interval, dueAt, ...)
+ */
 export type UserNotebookEntry = UserVocabulary & {
   vocabulary: Vocabulary;
+  collections?: string[];
+  review?: {
+    id: string;
+    easeFactor: number;
+    intervalDays: number;
+    repetition: number;
+    lapses: number;
+    dueAt: Date;
+    lastReviewedAt: Date | null;
+  } | null;
 };
+
+// ─── Phase 2 — Review / SRS / Collections / Tags / Note / Mastered ─────────
+
+export const reviewGradeSchema = z.union([
+  z.literal(0),
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+]);
+export type ReviewGrade = z.infer<typeof reviewGradeSchema>;
+// 0 = Again (Quên), 1 = Hard (Khó), 2 = Good (Tốt), 3 = Easy (Dễ)
+
+export const tagsSchema = z
+  .array(
+    z
+      .string()
+      .min(1)
+      .max(30)
+      .transform((s) => s.toLowerCase().trim())
+      .refine((s) => s.length > 0, "Tag không được để trống"),
+  )
+  .max(10, "Tối đa 10 tag cho mỗi từ")
+  .default([]);
+
+export const noteSchema = z
+  .string()
+  .max(1000, "Ghi chú tối đa 1000 ký tự")
+  .optional()
+  .or(z.literal(""));
+
+export const createCollectionSchema = z.object({
+  name: z.string().min(1, "Tên bộ sưu tập không được để trống").max(100),
+  description: z.string().max(500).optional().or(z.literal("")),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Màu không hợp lệ")
+    .optional()
+    .or(z.literal("")),
+});
+export type CreateCollectionInput = z.infer<typeof createCollectionSchema>;
+
+export const updateCollectionSchema = createCollectionSchema.partial();
+export type UpdateCollectionInput = z.infer<typeof updateCollectionSchema>;
+
+export const tagsInputSchema = z.object({
+  vocabularyId: z.string().min(1),
+  tags: tagsSchema,
+});
+export const noteInputSchema = z.object({
+  vocabularyId: z.string().min(1),
+  note: z.string().max(1000).optional().or(z.literal("")),
+});
+export const masteredInputSchema = z.object({
+  vocabularyId: z.string().min(1),
+});
+export const reviewInputSchema = z.object({
+  vocabularyId: z.string().min(1),
+  grade: reviewGradeSchema,
+});
+export const collectionMembershipSchema = z.object({
+  collectionId: z.string().min(1),
+  vocabularyId: z.string().min(1),
+});
+export const bulkMembershipSchema = z.object({
+  collectionId: z.string().min(1),
+  vocabularyIds: z.array(z.string().min(1)).min(1).max(200),
+});
+export const bulkRemoveSchema = z.object({
+  vocabularyIds: z.array(z.string().min(1)).min(1).max(200),
+});
+export const togglePublicSchema = z.object({
+  collectionId: z.string().min(1),
+  isPublic: z.boolean(),
+});
+export const cloneSharedSchema = z.object({
+  shareSlug: z.string().min(1).max(32),
+});
+export const createReviewSchema = z.object({
+  vocabularyId: z.string().min(1),
+});
 
 export type VocabularySearchResult = {
   items: VocabularyWithMeta[];
